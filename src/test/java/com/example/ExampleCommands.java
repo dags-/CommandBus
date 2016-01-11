@@ -14,7 +14,7 @@ public class ExampleCommands
     public void example1(CommandEvent<String> commandEvent)
     {
         System.out.println("Caller: " + commandEvent.caller());
-        commandEvent.flags().ifPresent(f -> System.out.println("name: " + f.string()), "name");
+        commandEvent.flags().ifPresent("name", f -> System.out.println("name: " + f.string()));
     }
 
     @Cmd(aliases = {"main sub1", "main s1", "m s1"})
