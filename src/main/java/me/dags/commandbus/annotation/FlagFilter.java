@@ -10,7 +10,7 @@ import java.lang.annotation.RetentionPolicy;
 @Retention(value = RetentionPolicy.RUNTIME)
 public @interface FlagFilter
 {
-    String[] requireFlags() default {};
+    String[] require() default {};
 
-    String[] blockFlags() default {};
+    String[] block() default {};
 }

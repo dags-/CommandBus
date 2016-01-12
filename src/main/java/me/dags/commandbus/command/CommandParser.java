@@ -69,7 +69,7 @@ public class CommandParser
     private String readString(char... until)
     {
         int start = pos;
-        int shorten = 0;
+        int trim = 0;
         outer:
         while (pos < buf.length)
         {
@@ -78,11 +78,11 @@ public class CommandParser
             {
                 if (match == c)
                 {
-                    shorten = 1;
+                    trim = 1;
                     break outer;
                 }
             }
         }
-        return new String(buf, start, pos - start - shorten);
+        return new String(buf, start, pos - start - trim);
     }
 }

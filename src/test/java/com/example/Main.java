@@ -13,7 +13,7 @@ public class Main
     public static final String example2 = "/main s1 name:'some string' derp:false herp:1337";
     public static final String example3 = "/main s1 name:'some string' dep:false herp:1337";
 
-    private static final CommandBus<String> bus = new CommandBus<String>().register(ExampleCommands.class);
+    private static final CommandBus bus = new CommandBus().register(ExampleCommands.class);
 
     public static void main(String[] args)
     {
@@ -28,8 +28,8 @@ public class Main
     {
         System.out.println("=========: " + owner);
 
-        Result<String> result = bus.call(owner, command);
-        result.onFail(r -> System.out.println(r.message()));
+        Result result = bus.call(owner, command);
+        result.onFail(r -> System.out.println(r.message));
 
         System.out.println();
     }

@@ -8,9 +8,9 @@ import java.lang.annotation.RetentionPolicy;
  */
 
 @Retention(value = RetentionPolicy.RUNTIME)
-public @interface Cmd
+public @interface Command
 {
-    String[] aliases();
+    String[] command();
 
     String permission() default "";
 }

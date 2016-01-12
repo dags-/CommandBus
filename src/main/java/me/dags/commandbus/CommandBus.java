@@ -1,35 +1,28 @@
 package me.dags.commandbus;
 
-import me.dags.commandbus.annotation.Cmd;
+import me.dags.commandbus.annotation.Command;
 import me.dags.commandbus.annotation.FlagFilter;
-import me.dags.commandbus.command.Command;
+import me.dags.commandbus.command.CommandContainer;
 import me.dags.commandbus.command.CommandEvent;
 import me.dags.commandbus.command.Result;
 
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
  * @author dags_ <dags@dags.me>
  */
 
-public class CommandBus<T>
+public class CommandBus
 {
-    protected final Map<String, Command<T>> commandMap = new HashMap<>();
-    protected Optional<PermissionCheck<T>> permissionCheck = Optional.empty();
-
-    public final List<String> listAll()
-    {
-        return commandMap.keySet().stream().sorted().collect(Collectors.toList());
-    }
-
-    public final List<String> listMatching(String input)
-    {
-        return commandMap.keySet().stream().filter(s -> s.startsWith(input)).sorted().collect(Collectors.toList());
-    }
-
-    public final CommandBus<T> providePermissionCheck(PermissionCheck<T> check)
+    protected final Map<String, CommandContainer> commandMap = new HashMap<>();
+    protected Optional<PermissionCheck> permissionCheck = Optional.empty();
+    
+    public final CommandBus providePermissionCheck(PermissionCheck check)
     {
         if (check != null)
         {
@@ -38,7 +31,7 @@ public class CommandBus<T>
         return this;
     }
 
-    public final CommandBus<T> register(Class<?> c)
+    public final CommandBus register(Class<?> c)
     {
         try
         {
@@ -51,34 +44,44 @@ public class CommandBus<T>
         return this;
     }
 
-    public final CommandBus<T> register(Object o)
+    public final CommandBus register(Object o)
     {
         register(o, o.getClass());
         return this;
     }
 
-    public final Result<T> call(T caller, String commandInput)
+    public final <T> Result call(T caller, String commandInput)
     {
         Optional<CommandEvent<T>> event = CommandEvent.from(caller, commandInput);
         if (event.isPresent())
         {
             return call(event.get());
         }
-        return Result.parseError("Unable to parse command: " + commandInput);
+        return Result.Type.PARSE_ERROR.toResult(commandInput);
     }
 
-    public final Result<T> call(CommandEvent<T> event)
+    public final <T> Result call(CommandEvent<T> event)
     {
-        Command<T> c = commandMap.get(event.command());
+        CommandContainer c = commandMap.get(event.command());
         if (c != null)
         {
             if (permissionCheck.isPresent() && !c.permission().isEmpty() && !permissionCheck.get().hasPermission(event.caller(), c.permission()))
             {
-                return Result.builder(event).success(false).message(Result.PERMISSION_DENIED).build();
+                return Result.Type.NO_PERMISSION.toResult(c.permission());
             }
             return c.call(event);
         }
-        return Result.builder(event).success(false).message(Result.NOT_RECOGNISED).build();
+        return Result.Type.NOT_RECOGNISED.toResult(event.command());
+    }
+
+    public final List<String> listAll()
+    {
+        return commandMap.keySet().stream().sorted().collect(Collectors.toList());
+    }
+
+    public final List<String> listMatching(String input)
+    {
+        return commandMap.keySet().stream().filter(s -> s.startsWith(input)).sorted().collect(Collectors.toList());
     }
 
     private void register(Object o, Class<?> c)
@@ -92,20 +95,20 @@ public class CommandBus<T>
         {
             for (Method m : c.getDeclaredMethods())
             {
-                Cmd cmd = m.getAnnotation(Cmd.class);
+                Command cmd = m.getAnnotation(Command.class);
                 if (cmd != null)
                 {
                     FlagFilter filter = m.getAnnotation(FlagFilter.class);
-                    Command<T> cd = filter != null ? new Command<>(o, m, cmd, filter) : new Command<>(o, m, cmd);
-                    cd.register(commandMap);
+                    CommandContainer command = filter != null ? new CommandContainer(o, m, cmd, filter) : new CommandContainer(o, m, cmd);
+                    for (String s : cmd.command()) commandMap.put(s, command);
                 }
             }
             c = c.getSuperclass();
         }
     }
 
-    public interface PermissionCheck<T>
+    public interface PermissionCheck
     {
-        boolean hasPermission(T caller, String permission);
+        public boolean hasPermission(Object target, String permission);
     }
 }

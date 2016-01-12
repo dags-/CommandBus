@@ -1,114 +1,61 @@
 package me.dags.commandbus.command;
 
-import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
  * @author dags_ <dags@dags.me>
  */
 
-public class Result<T>
+public class Result
 {
-    public static final String NOT_RECOGNISED = "Command not recognized!";
-    public static final String PERMISSION_DENIED = "Insufficient permissions!";
+    public final Type type;
+    public final String message;
 
-    private final Optional<CommandEvent<T>> event;
-    private final String message;
-    private final boolean parsed;
-    private final boolean success;
-
-    private Result(Builder<T> builder)
+    private Result(Result.Type type, String message)
     {
-        this.event = builder.event == null ? Optional.<CommandEvent<T>>empty() : Optional.of(builder.event);
-        this.message = builder.message;
-        this.parsed = builder.parsed;
-        this.success = builder.success;
+        this.type = type;
+        this.message = message;
     }
 
-    public Optional<CommandEvent<T>> event()
+    public Result onPass(Consumer<Result> consumer)
     {
-        return event;
-    }
-
-    public String message()
-    {
-        return message;
-    }
-
-    public boolean parsed()
-    {
-        return parsed;
-    }
-
-    public boolean success()
-    {
-        return success;
-    }
-
-    public void onPass(Consumer<Result<T>> consumer)
-    {
-        if (success)
+        if (type == Result.Type.SUCCESS)
         {
             consumer.accept(this);
         }
+        return this;
     }
 
-    public void onFail(Consumer<Result<T>> consumer)
+    public Result onFail(Consumer<Result> consumer)
     {
-        if (!success)
+        if (type != Result.Type.SUCCESS)
         {
             consumer.accept(this);
         }
+        return this;
     }
 
-    public static <T> Builder<T> builder(CommandEvent<T> e)
+    public enum Type
     {
-        return new Builder<>(e);
-    }
+        CALL_ERROR("Command failed to execute correctly"),
+        ILLEGAL_FLAGS("The following flags are blocked from use"),
+        MISSING_FLAGS("The following flags are required"),
+        NO_PERMISSION("Missing permission"),
+        NOT_RECOGNISED("Command not recognised"),
+        PARSE_ERROR("Unable to parse input"),
+        SUCCESS("Success"),
+        ;
 
-    public static <T> Result<T> parseError(String input)
-    {
-        return new Builder<T>(null).message(input).success(false).parsed(false).build();
-    }
+        private final String prefix;
 
-    public static class Builder<T>
-    {
-        private CommandEvent<T> event;
-        private String message = "";
-        private boolean parsed = true;
-        private boolean success = false;
-
-        private Builder(CommandEvent<T> e)
+        private Type(String prefix)
         {
-            event = e;
+            this.prefix = prefix + ": ";
         }
 
-        public Builder<T> message(String s)
+        public Result toResult(String message)
         {
-            message = s;
-            return this;
-        }
-
-        public Builder<T> success(boolean b)
-        {
-            success = b;
-            return this;
-        }
-
-        public Builder<T> parsed(boolean b)
-        {
-            parsed = b;
-            return this;
-        }
-
-        public boolean success()
-        {
-            return success;
-        }
-
-        public Result<T> build()
-        {
-            return new Result<>(this);
+            return new Result(this, prefix + message);
         }
     }
 }
