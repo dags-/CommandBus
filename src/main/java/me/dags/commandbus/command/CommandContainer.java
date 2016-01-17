@@ -2,6 +2,7 @@ package me.dags.commandbus.command;
 
 import me.dags.commandbus.annotation.Command;
 import me.dags.commandbus.annotation.FlagFilter;
+import me.dags.commandbus.flag.Filter;
 
 import java.lang.reflect.Method;
 import java.util.Optional;
@@ -15,7 +16,7 @@ public class CommandContainer
     private final Object owner;
     private final Method target;
     private final Command cmd;
-    private final Optional<FlagFilter> filter;
+    private final Optional<Filter> filter;
 
     public CommandContainer(Object o, Method m, Command c)
     {
@@ -30,7 +31,7 @@ public class CommandContainer
         owner = o;
         target = m;
         cmd = c;
-        filter = Optional.of(f);
+        filter = Optional.of(Filter.of(f));
     }
 
     public String permission()

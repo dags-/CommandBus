@@ -11,7 +11,7 @@ public class Main
 {
     public static final String example1 = "/main";
     public static final String example2 = "/main s1 name:'some string' derp:false herp:1337";
-    public static final String example3 = "/main s1 name:'some string' dep:false herp:1337";
+    public static final String example3 = "/main s1 name:'some string' d:false hs:1337";
 
     private static final CommandBus bus = new CommandBus().register(ExampleCommands.class);
 

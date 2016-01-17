@@ -1,6 +1,5 @@
 package me.dags.commandbus.flag;
 
-import me.dags.commandbus.annotation.FlagFilter;
 import me.dags.commandbus.command.Result;
 
 import java.util.Arrays;
@@ -51,17 +50,17 @@ public class Flags
         return true;
     }
 
-    public Result filter(FlagFilter filter)
+    public Result filter(Filter filter)
     {
-        if (!hasAll(filter.require()))
+        if (!filter.allow(flags.keySet()))
         {
-            return Result.Type.MISSING_FLAGS.toResult(Arrays.toString(filter.require()));
+            return Result.Type.MISSING_FLAGS.toResult(Arrays.toString(filter.flagFilter.require()));
         }
-        if (hasAny(filter.block()))
+        if (filter.block(flags.keySet()))
         {
-            return Result.Type.ILLEGAL_FLAGS.toResult(Arrays.toString(filter.block()));
+            return Result.Type.ILLEGAL_FLAGS.toResult(Arrays.toString(filter.flagFilter.block()));
         }
-        return Result.Type.SUCCESS.toResult("Passed all flag filters!");
+        return Result.Type.SUCCESS.toResult("No filters, automatic pass!");
     }
 
     public FlagValue get(String flag)
