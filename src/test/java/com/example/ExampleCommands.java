@@ -21,19 +21,8 @@ public class ExampleCommands
     @FlagFilter(require = {"h|herp", "d|derp"})
     public void example2(CommandEvent<String> commandEvent)
     {
-        int herp;
-        boolean derp;
-        if (commandEvent.flags().hasFlag("h"))
-        {
-            herp = commandEvent.flags().get("h").number().intValue();
-            derp = commandEvent.flags().get("d").bool();
-        }
-        else
-        {
-            herp = commandEvent.flags().get("herp").number().intValue();
-            derp = commandEvent.flags().get("derp").bool();
-        }
-
+        int herp = commandEvent.flags().get("h","herp").get().number().intValue();
+        boolean derp = commandEvent.flags().get("d", "derp").get().bool();
         System.out.println("Caller: " + commandEvent.caller());
         System.out.println("herp: " + herp);
         System.out.println("derp: " + derp);
