@@ -1,64 +1,42 @@
 package me.dags.commandbus.command;
 
-import me.dags.commandbus.flag.FlagValue;
-import me.dags.commandbus.flag.Flags;
-
 import java.util.Optional;
 
 /**
- * @author dags_ <dags@dags.me>
+ * @author dags <dags@dags.me>
  */
 
 public class CommandParser
 {
-    private final char[] buf;
+    private final String in;
     private int pos = 0;
 
     public CommandParser(String in)
     {
-        buf = in.toCharArray();
+        this.in = in;
+    }
+
+    private boolean hasNext()
+    {
+        return pos < in.length() - 1;
+    }
+
+    private char read()
+    {
+        return pos < in.length() ? in.charAt(pos) : (char) -1;
     }
 
     public <T> Optional<CommandEvent<T>> parse(T caller)
     {
         try
         {
-            String main = "";
-            Flags flags = new Flags();
-            StringBuilder sb = new StringBuilder();
+            String command = readCommand();
+            if (command.isEmpty()) return Optional.empty();
 
-            if (buf[pos] == '/')
-            {
-                pos++;
-            }
+            CommandEvent<T> event = new CommandEvent<T>(caller, command);
+            readFlags(event);
 
-            while (pos < buf.length)
-            {
-                String key = readString(' ', ':');
-                if (pos < buf.length && buf[pos - 1] == ':')
-                {
-                    if (main.isEmpty())
-                    {
-                        main = sb.deleteCharAt(sb.length() - 1).toString();
-                    }
-                    char match = ' ';
-                    if (buf[pos] == '\'' && pos + 2 < buf.length)
-                    {
-                        match = buf[pos++];
-                    }
-                    String value = readString(match);
-                    flags.add(key, FlagValue.of(value));
-                }
-                else
-                {
-                    sb.append(key).append(" ");
-                }
-            }
-            if (main.isEmpty() && sb.length() > 0)
-            {
-                main = sb.deleteCharAt(sb.length() - 1).toString();
-            }
-            return Optional.of(new CommandEvent<>(caller, main, flags));
+            return Optional.of(event);
         }
         catch (Throwable t)
         {
@@ -66,23 +44,103 @@ public class CommandParser
         }
     }
 
-    private String readString(char... until)
+    public void readFlags(CommandEvent e)
     {
-        int start = pos;
-        int trim = 0;
-        outer:
-        while (pos < buf.length)
+        while (hasNext())
         {
-            char c = buf[pos++];
-            for (char match : until)
+            String key = readKey();
+            if (key.isEmpty()) break;
+            String value = readValue();
+            if (value.isEmpty()) break;
+            e.add(key, parseValue(value));
+        }
+    }
+
+    private String readCommand()
+    {
+        int start = in.charAt(0) == '/' ? 1 : 0, lastSpace = start;
+        while (hasNext() && read() != ':')
+        {
+            if (read() == ' ')
             {
-                if (match == c)
-                {
-                    trim = 1;
-                    break outer;
-                }
+                lastSpace = pos;
+            }
+            pos++;
+            if (!hasNext())
+            {
+                lastSpace = in.length();
             }
         }
-        return new String(buf, start, pos - start - trim);
+        pos = lastSpace + 1;
+        return in.substring(start, lastSpace).trim();
+    }
+
+    private String readKey()
+    {
+        int start = pos;
+        while (hasNext() && read() != ':')
+        {
+            pos++;
+        }
+        return in.substring(start, pos++).trim();
+    }
+
+    private String readValue()
+    {
+        int start = pos, lastSpace = start;
+        while (hasNext() && read() != ':')
+        {
+            if (read() == ' ')
+            {
+                lastSpace = pos;
+            }
+            pos++;
+            if (!hasNext())
+            {
+                lastSpace = in.length();
+            }
+        }
+        pos = lastSpace + 1;
+        return in.substring(start, lastSpace).trim();
+    }
+
+    private Value parseValue(String in)
+    {
+        if (isNumber(in))
+        {
+            if (in.contains("."))
+            {
+                return new Value(Double.valueOf(in));
+            }
+            return new Value(Integer.valueOf(in));
+        }
+        if (in.equalsIgnoreCase("true") || in.equalsIgnoreCase("false"))
+        {
+            return new Value(Boolean.valueOf(in));
+        }
+        return new Value(in);
+    }
+
+    public static boolean isNumber(String s)
+    {
+        if (s == null || s.isEmpty())
+        {
+            return false;
+        }
+        boolean decimal = false;
+        for (int i = 0; i < s.length(); i++)
+        {
+            char c = s.charAt(i);
+            if (Character.isDigit(c) || (i == 0 && c == '-' && s.length() > 1))
+            {
+                continue;
+            }
+            if (!decimal && (decimal = c == '.') && s.length() - 1 > i)
+            {
+                continue;
+            }
+            return false;
+        }
+        return true;
     }
 }

@@ -9,13 +9,9 @@ import java.lang.annotation.Target;
  * @author dags <dags@dags.me>
  */
 
-@Target(value = ElementType.METHOD)
+@Target(value = ElementType.PARAMETER)
 @Retention(value = RetentionPolicy.RUNTIME)
-public @interface Command
+public @interface Arg
 {
-    public String[] alias();
-
-    public String permission() default "";
-
-    public String description() default "";
+    public String[] a();
 }

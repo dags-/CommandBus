@@ -3,7 +3,7 @@ package me.dags.commandbus.command;
 import java.util.function.Consumer;
 
 /**
- * @author dags_ <dags@dags.me>
+ * @author dags <dags@dags.me>
  */
 
 public class Result
@@ -11,7 +11,7 @@ public class Result
     public final Type type;
     public final String message;
 
-    private Result(Result.Type type, String message)
+    private Result(Type type, String message)
     {
         this.type = type;
         this.message = message;
@@ -19,7 +19,7 @@ public class Result
 
     public Result onPass(Consumer<Result> consumer)
     {
-        if (type == Result.Type.SUCCESS)
+        if (type == Type.SUCCESS)
         {
             consumer.accept(this);
         }
@@ -28,7 +28,7 @@ public class Result
 
     public Result onFail(Consumer<Result> consumer)
     {
-        if (type != Result.Type.SUCCESS)
+        if (type != Type.SUCCESS)
         {
             consumer.accept(this);
         }
@@ -38,8 +38,7 @@ public class Result
     public enum Type
     {
         CALL_ERROR("Command failed to execute correctly"),
-        ILLEGAL_FLAGS("The following flags are blocked from use"),
-        MISSING_FLAGS("The following flags are required"),
+        MISSING_FLAG("The following flag is required"),
         NO_PERMISSION("Missing permission"),
         NOT_RECOGNISED("Command not recognised"),
         PARSE_ERROR("Unable to parse input"),
