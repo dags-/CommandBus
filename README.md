@@ -8,9 +8,8 @@ Another command annotation processing thing
 ```
 /command subCommand flag1:345 flag2:false flag3:someString flag4:some String with spaces flag5:45.23
 ```
-Where the ```/command subCommand``` directs to the desired Method (annotated with the @Command annotation)
-
-Any flags following the above portion can be queried/accessed via the CommandEvent, or can be specified as a method parameter
+Where the ```/command subCommand``` directs to the desired Method (annotated with the @Command annotation)  
+Any flags after the above portion can be queried/accessed via the CommandEvent, or can be specified as a method parameter
 via the @Arg annotation
 
 
