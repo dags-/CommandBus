@@ -10,7 +10,8 @@ Another command annotation processing thing
 ```
 Where the ```/command subCommand``` directs to the desired Method (annotated with the @Command annotation)
 
-Any flags following the above portion can be queried/accessed via the CommandEvent..flags() method
+Any flags following the above portion can be queried/accessed via the CommandEvent, or can be specified as a method parameter
+via the @Arg annotation
 
 
 ### code
