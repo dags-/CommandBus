@@ -6,7 +6,7 @@ Another command annotation processing thing
 
 ### format
 ```
-/command subCommand flag1:345 flag2:false flag3:someString flag4:'some String with spaces'
+/command subCommand flag1:345 flag2:false flag3:someString flag4:some String with spaces flag5:45.23
 ```
 Where the ```/command subCommand``` directs to the desired Method (annotated with the @Command annotation)
 
@@ -14,23 +14,23 @@ Any flags following the above portion can be queried/accessed via the CommandEve
 
 
 ### code
-```
+```java
 class SomeClass
 {
-    @Command(command = "command subCommand1")
+    @Command(alias = "command subCommand1")
     public void exampleCommand1(CommandEvent<?> event)
     {
-        event.flags().ifPresent("flag1", f -> System.out.println(f.number()));
-        event.flags().ifPresent("flag2", f -> System.out.println(f.bool()));
+        event.ifPresent("flag1", f -> System.out.println(f.number()));
+        event.ifPresent("flag2", f -> System.out.println(f.bool()));
         ...etc
     }
 
-    @Command(command = "command subCommand2")
-    @FlagFilter(require = {"flag3", "flag4"}, block = {"flag1", "flag2"})
-    public void exampleCommand2(CommandEvent<?> event)
+    @Command(alias = "command subCommand2")
+    public void exampleCommand2(@Caller CommandSource source, @Arg(a="flag1")int flag1, @Arg(a="flag4")String flag4)
     {
-        System.out.println(event.flags().get("flag3").string());
-        System.out.println(event.flags().get("flag4").string());
+        System.out.println(source);
+        System.out.println("Flag1: " + flag1);
+        System.out.println("Flag4: " + flag4);
         ...etc
     }
 }
