@@ -3,11 +3,10 @@ jdk:
  - oraclejdk8
 script:
   - mvn clean install
-  - make dist
 deploy:
   provider: releases
   api_key: '$GITHUB_API_KEY'
-  file: "release.zip"
+  file: "dist/CommandBus-1.2.0-SNAPSHOT.jar"
   skip_cleanup: true
   on:
     tags: true
