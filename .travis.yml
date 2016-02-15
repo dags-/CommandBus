@@ -9,4 +9,4 @@ deploy:
   file: "dist/CommandBus-1.2.0-SNAPSHOT.jar"
   skip_cleanup: true
   on:
-    tags: true
+    tags: false
