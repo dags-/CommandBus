@@ -8,8 +8,6 @@ import java.util.Optional;
 
 public class CommandParser
 {
-    private static final char FLAG_IDENTIFIER = '=';
-
     private final String in;
     private int pos = 0;
 
@@ -61,14 +59,14 @@ public class CommandParser
     private String readCommand()
     {
         int start = in.charAt(0) == '/' ? 1 : 0, lastSpace = start;
-        while (hasNext() && read() != FLAG_IDENTIFIER)
+        while (pos < in.length() && read() != ':')
         {
             if (read() == ' ')
             {
                 lastSpace = pos;
             }
             pos++;
-            if (!hasNext())
+            if (pos >= in.length())
             {
                 lastSpace = in.length();
             }
@@ -80,7 +78,7 @@ public class CommandParser
     private String readKey()
     {
         int start = pos;
-        while (hasNext() && read() != FLAG_IDENTIFIER)
+        while (hasNext() && read() != ':')
         {
             pos++;
         }
@@ -90,20 +88,20 @@ public class CommandParser
     private String readValue()
     {
         int start = pos, lastSpace = start;
-        while (hasNext() && read() != FLAG_IDENTIFIER)
+        while (pos < in.length() && read() != ':')
         {
             if (read() == ' ')
             {
                 lastSpace = pos;
             }
             pos++;
-            if (!hasNext())
+            if (pos >= in.length())
             {
                 lastSpace = in.length();
             }
         }
         pos = lastSpace + 1;
-        return in.substring(start, lastSpace).trim();
+        return in.substring(start, lastSpace);
     }
 
     private Value parseValue(String in)

@@ -26,7 +26,20 @@ public class CommandRegister
         this.commandBus = commandBus;
     }
 
-    public void addCommand(Object owner, CommandContainer commandContainer)
+    protected CommandContainer find(CommandEvent<?> event)
+    {
+        List<CommandContainer> containers = getCommand(event);
+        for (CommandContainer container : containers)
+        {
+            if (container.matches(event))
+            {
+                return container;
+            }
+        }
+        return null;
+    }
+
+    protected void addCommand(Object owner, CommandContainer commandContainer)
     {
         if (!containerMap.containsValue(commandContainer.command()))
         {
@@ -34,20 +47,26 @@ public class CommandRegister
             containerMap.put(commandContainer, commandContainer.command());
         }
 
+        List<CommandContainer> toAdd = new ArrayList<>();
+        toAdd.add(commandContainer);
+
         for (String s : commandContainer.aliases())
         {
-            add(s.toLowerCase(), commandContainer);
+            List<CommandContainer> list = register.get(s);
+            if (list == null)
+            {
+                register.put(s, toAdd);
+            }
+            else
+            {
+                list.addAll(toAdd);
+            }
         }
     }
 
-    private void add(String command, CommandContainer commandContainer)
+    protected boolean hasCommand(String in)
     {
-        List<CommandContainer> list = register.get(command);
-        if (list == null)
-        {
-            register.put(command, list = new ArrayList<>());
-        }
-        list.add(commandContainer);
+        return register.containsKey(in.toLowerCase());
     }
 
     public List<CommandContainer> getCommand(CommandEvent event)

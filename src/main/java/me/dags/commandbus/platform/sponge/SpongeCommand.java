@@ -2,8 +2,6 @@ package me.dags.commandbus.platform.sponge;
 
 import me.dags.commandbus.CommandBus;
 import me.dags.commandbus.command.CommandContainer;
-import me.dags.commandbus.command.CommandEvent;
-import me.dags.commandbus.command.CommandParser;
 import me.dags.commandbus.command.Result;
 import org.spongepowered.api.command.CommandCallable;
 import org.spongepowered.api.command.CommandException;
@@ -32,10 +30,7 @@ public class SpongeCommand implements CommandCallable
     @Override
     public CommandResult process(CommandSource commandSource, String s) throws CommandException
     {
-        CommandEvent<CommandSource> event = new CommandEvent<CommandSource>(commandSource, commandContainer.command());
-        new CommandParser(s).readFlags(event);
-
-        Result result = commandContainer.call(event);
+        Result result = commandBus.post(commandSource, commandContainer.command() + " " + s);
 
         if (result.type == Result.Type.SUCCESS)
         {

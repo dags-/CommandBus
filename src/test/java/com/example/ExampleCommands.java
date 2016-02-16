@@ -27,10 +27,10 @@ public class ExampleCommands
     }
 
     @Command(alias = {"main sub1", "main s1", "m s1"})
-    public void example3(@Caller CharSequence caller, @Arg(a="boop") double boop, @Arg(a="bap")String bap)
+    public void example3(@Caller CharSequence caller, @Arg(a="boop") double boop, @Arg(a="baap")String bap)
     {
         System.out.println("Caller: " + caller);
         System.out.println("boop: " + boop);
-        System.out.println("bap: " + bap);
+        System.out.println("baap: " + bap);
     }
 }

@@ -4,8 +4,8 @@ import me.dags.commandbus.annotation.Arg;
 import me.dags.commandbus.annotation.Caller;
 import me.dags.commandbus.annotation.Command;
 import me.dags.commandbus.args.AnnotatedArg;
-import me.dags.commandbus.args.CommandArg;
 import me.dags.commandbus.args.CallerArg;
+import me.dags.commandbus.args.CommandArg;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -59,6 +59,19 @@ public class CommandContainer
     public String description()
     {
         return command.description();
+    }
+
+    public boolean matches(CommandEvent<?> event)
+    {
+        for (CommandArg arg : args)
+        {
+            if (arg instanceof CallerArg || event.hasOneOf(arg.aliases()))
+            {
+                continue;
+            }
+            return false;
+        }
+        return true;
     }
 
     @Override

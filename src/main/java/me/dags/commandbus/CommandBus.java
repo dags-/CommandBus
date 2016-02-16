@@ -8,7 +8,6 @@ import me.dags.commandbus.command.Result;
 import me.dags.commandbus.platform.Platform;
 
 import java.lang.reflect.Method;
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -75,26 +74,18 @@ public class CommandBus
 
     public final <T> Result post(CommandEvent<T> event)
     {
-        List<CommandContainer> list = register.getCommand(event);
-        if (!list.isEmpty())
+        if (register.hasCommand(event.command()))
         {
-            Result result = null;
-            for (CommandContainer c : list)
+            CommandContainer c = register.find(event);
+            if (c != null)
             {
                 if (permissionCheck.isPresent() && c.hasPermission() && !permissionCheck.get().hasPermission(event.caller(), c.permission()))
                 {
-                    Result perm = Result.Type.NO_PERMISSION.toResult(c.permission());
-                    result = result == null ? perm : result.type == Result.Type.SUCCESS ? result : perm;
-                    continue;
+                    return Result.Type.NO_PERMISSION.toResult(c.permission());
                 }
-                Result call = c.call(event);
-                if (call.type == Result.Type.SUCCESS)
-                {
-                    return call;
-                }
-                result = call;
+                return c.call(event);
             }
-            return result;
+            return Result.Type.MISSING_FLAG.toResult(event.toString());
         }
         return Result.Type.NOT_RECOGNISED.toResult(event.command());
     }
@@ -122,6 +113,6 @@ public class CommandBus
 
     public interface PermissionCheck
     {
-        public boolean hasPermission(Object target, String permission);
+        boolean hasPermission(Object target, String permission);
     }
 }

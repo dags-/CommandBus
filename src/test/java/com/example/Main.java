@@ -11,9 +11,9 @@ public class Main
 {
     public static final String example1 = "/main";
     public static final String example2 = "/main s1 name:some string derp:false herp:adasdasd";
-    public static final String example3 = "/main s1 boop:723.7190 bap:342 324 12";
+    public static final String example3 = "/main sub1 boop:723.7190 baap:342 324 12";
 
-    private static final CommandBus bus = new CommandBus().register(null, ExampleCommands.class);
+    private static final CommandBus bus = new CommandBus().register("", ExampleCommands.class);
 
     public static void main(String[] args)
     {

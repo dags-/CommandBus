@@ -1,5 +1,6 @@
 package me.dags.commandbus.command;
 
+import me.dags.commandbus.args.CallerArg;
 import me.dags.commandbus.args.CommandArg;
 
 import java.util.HashMap;
@@ -93,11 +94,11 @@ public class CommandEvent<T>
         return Value.empty;
     }
 
-    public void ifPresent(String key, Consumer<Value> consumer)
+    public void ifPresent(String name, Consumer<Value> consumer)
     {
-        if (hasOneOf(key))
+        if (has(name))
         {
-            consumer.accept(get(key));
+            consumer.accept(flags.get(name));
         }
     }
 
@@ -113,21 +114,21 @@ public class CommandEvent<T>
 
     protected Object get(CommandArg arg)
     {
-        for (String flag : arg.aliases())
-        {
-            Value value = flags.get(flag.toLowerCase());
-            if (value != null)
-            {
-                return value.as(arg.type());
-            }
-        }
-        if (arg.type().isInstance(caller))
+        if (arg instanceof CallerArg && arg.type().isInstance(caller))
         {
             return caller;
         }
         if (arg.type().equals(CommandEvent.class))
         {
             return this;
+        }
+        for (String flag : arg.aliases())
+        {
+            Value value = flags.get(flag);
+            if (value != null)
+            {
+                return value.as(arg.type());
+            }
         }
         return null;
     }
