@@ -1,4 +1,4 @@
-package me.dags.commandbus.command;
+package me.dags.commandbusold.command;
 
 import java.util.Optional;
 
@@ -29,14 +29,14 @@ public class CommandParser
         return pos < in.length() ? in.charAt(pos) : (char) -1;
     }
 
-    public <T> Optional<CommandEvent<T>> parse(T caller)
+    public <T> Optional<CommandEvent<T>> parses(T caller)
     {
         try
         {
             String command = readCommand();
             if (command.isEmpty()) return Optional.empty();
 
-            CommandEvent<T> event = new CommandEvent<>(caller, command);
+            CommandEvent<T> event = new CommandEvent<T>(caller, command);
             readFlags(event);
 
             return Optional.of(event);
@@ -75,7 +75,7 @@ public class CommandParser
             }
         }
         pos = lastSpace + 1;
-        return in.substring(start, lastSpace).trim().toLowerCase();
+        return in.substring(start, lastSpace).trim();
     }
 
     private String readKey()
@@ -85,7 +85,7 @@ public class CommandParser
         {
             pos++;
         }
-        return in.substring(start, pos++).trim().toLowerCase();
+        return in.substring(start, pos++).trim();
     }
 
     private String readValue()

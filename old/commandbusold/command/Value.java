@@ -1,12 +1,16 @@
-package me.dags.commandbus.command;
+package me.dags.commandbusold.command;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * @author dags <dags@dags.me>
+ */
+
 public class Value
 {
-	private static final Map<Class<?>, Adapter> typeAdapters = adapters();
+    private static final Map<Class<?>, Adapter> typeAdapters = adapters();
     public static final Value empty = new Value(Double.NaN);
 
     private final Object value;
@@ -38,17 +42,6 @@ public class Value
     public Number number()
     {
         return (Number) value;
-    }
-
-    public Class<?> type()
-    {
-    	return value.getClass();
-    }
-
-    public String debug()
-    {
-    	String s = value instanceof String ? "'" + value.toString() + "'" : value.toString();
-        return "(" + value.getClass().getSimpleName() + ")=" + s;
     }
 
     @Override
@@ -89,5 +82,4 @@ public class Value
     {
         return typeAdapters.containsKey(clazz);
     }
-
 }

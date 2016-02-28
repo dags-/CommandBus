@@ -1,4 +1,4 @@
-package me.dags.commandbus.args;
+package me.dags.commandbusold.args;
 
 /**
  * @author dags <dags@dags.me>

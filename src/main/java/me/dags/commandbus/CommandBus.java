@@ -5,19 +5,17 @@ import me.dags.commandbus.command.CommandContainer;
 import me.dags.commandbus.command.CommandEvent;
 import me.dags.commandbus.command.CommandParser;
 import me.dags.commandbus.command.Result;
+import me.dags.commandbus.platform.PermissionCheck;
 import me.dags.commandbus.platform.Platform;
 
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.Optional;
-
-/**
- * @author dags <dags@dags.me>
- */
 
 public class CommandBus
 {
-    private Optional<PermissionCheck> permissionCheck = Optional.empty();
-    private final CommandRegister register;
+	private final Registry registry;
+	private final Optional<PermissionCheck> permissionCheck = Optional.empty();
 
     public CommandBus()
     {
@@ -26,93 +24,75 @@ public class CommandBus
 
     public CommandBus(Platform platform)
     {
-        register = new CommandRegister(this, platform.getPlatformRegistrar());
+        registry = new Registry(platform.getPlatformRegistrar());
     }
 
-    public final CommandRegister getRegister()
-    {
-        return register;
-    }
+	public Registry registry()
+	{
+		return registry;
+	}
 
-    public final CommandBus providePermissionCheck(PermissionCheck check)
+    public <T> Result post(T caller, String input)
     {
-        if (check != null)
+        Optional<CommandEvent<T>> event = new CommandParser(input).parse(caller);
+        if (!event.isPresent())
         {
-            permissionCheck = Optional.of(check);
+            return Result.Type.PARSE_ERROR.toResult(input);
         }
-        return this;
+        return post(event.get());
     }
 
-    public final CommandBus register(Object owner, Class<?> c)
+	public <T> Result post(CommandEvent<T> event)
+	{
+		Optional<CommandContainer> optional = registry.matchOne(event);
+		if (!optional.isPresent())
+		{
+            List<CommandContainer> options = registry.matchAny(event);
+            if (options.isEmpty())
+            {
+                return Result.Type.NOT_RECOGNISED.toResult(event.toString());
+            }
+            StringBuilder sb = new StringBuilder(event.toString()).append("\nTry:");
+            options.forEach(c -> sb.append("\n").append(c));
+            return Result.Type.TOO_MANY_ARGS.toResult(sb.toString());
+		}
+        CommandContainer c = optional.get();
+        if (c.hasPermission() && permissionCheck.isPresent() && !permissionCheck.get().hasPermission(event.command(), c.permission()))
+        {
+            return Result.Type.NO_PERMISSION.toResult(c.permission());
+        }
+        return c.call(event);
+	}
+
+    public void register(Object plugin, Class<?> c)
     {
         try
         {
-            register(owner, c.newInstance(), c);
+            Object o = c.newInstance();
+            registry(plugin, o);
         }
         catch (InstantiationException | IllegalAccessException e)
         {
             e.printStackTrace();
         }
-        return this;
     }
 
-    public final CommandBus register(Object owner, Object o)
+    public void registry(Object plugin, Object command)
     {
-        register(owner, o, o.getClass());
-        return this;
-    }
-
-    public final <T> Result post(T caller, String commandInput)
-    {
-        Optional<CommandEvent<T>> event = new CommandParser(commandInput).parse(caller);
-        if (event.isPresent())
+        Class<?> c = command.getClass();
+        do
         {
-            return post(event.get());
-        }
-        return Result.Type.PARSE_ERROR.toResult(commandInput);
-    }
-
-    public final <T> Result post(CommandEvent<T> event)
-    {
-        if (register.hasCommand(event.command()))
-        {
-            CommandContainer c = register.find(event);
-            if (c != null)
-            {
-                if (permissionCheck.isPresent() && c.hasPermission() && !permissionCheck.get().hasPermission(event.caller(), c.permission()))
-                {
-                    return Result.Type.NO_PERMISSION.toResult(c.permission());
-                }
-                return c.call(event);
-            }
-            return Result.Type.MISSING_FLAG.toResult(event.toString());
-        }
-        return Result.Type.NOT_RECOGNISED.toResult(event.command());
-    }
-
-    private void register(Object owner, Object o, Class<?> c)
-    {
-        if (o == null || c == null)
-        {
-            return;
-        }
-
-        while (!Object.class.equals(c))
-        {
-            for (Method m : c.getDeclaredMethods())
+            for (Method m : command.getClass().getDeclaredMethods())
             {
                 if (m.isAnnotationPresent(Command.class))
                 {
-                    CommandContainer container = new CommandContainer(m.getAnnotation(Command.class), m, o);
-                    register.addCommand(owner, container);
+                    Command cmd = m.getAnnotation(Command.class);
+                    CommandContainer container = new CommandContainer(cmd, command, m);
+                    registry.register(this, plugin, container);
                 }
             }
             c = c.getSuperclass();
         }
-    }
-
-    public interface PermissionCheck
-    {
-        boolean hasPermission(Object target, String permission);
+        while (!Object.class.equals(c));
     }
 }

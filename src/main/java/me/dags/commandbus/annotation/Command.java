@@ -5,17 +5,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * @author dags <dags@dags.me>
- */
-
-@Target(value = ElementType.METHOD)
-@Retention(value = RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
 public @interface Command
 {
-    public String[] alias();
+	String[] alias();
 
-    public String permission() default "";
+	String perm() default "";
 
-    public String description() default "";
+	String desc() default "";
 }

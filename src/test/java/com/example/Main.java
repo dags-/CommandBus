@@ -9,14 +9,16 @@ import me.dags.commandbus.command.Result;
 
 public class Main
 {
-    public static final String example1 = "/main";
-    public static final String example2 = "/main s1 name:some string derp:false herp:adasdasd";
-    public static final String example3 = "/main sub1 boop:723.7190 baap:342 324 12";
+    public static final String example1 = "/main name=trevor";
+    public static final String example2 = "/main s1 name=some string derp=false herp=adasdasd";
+    public static final String example3 = "/main sub1 boop=723.7190 baap=342 324 12";
 
-    private static final CommandBus bus = new CommandBus().register("", ExampleCommands.class);
+    private static final CommandBus bus = new CommandBus();
 
     public static void main(String[] args)
     {
+        bus.register("", ExampleCommands.class);
+
         runTest("Example1", example1);
         runTest("Example2", example2);
         runTest("Example3", example3);
@@ -26,6 +28,7 @@ public class Main
     {
         System.out.println("=========: " + owner);
         Result result = bus.post(owner, command);
+
         result.onFail(r -> System.out.println(r.message));
         System.out.println();
     }

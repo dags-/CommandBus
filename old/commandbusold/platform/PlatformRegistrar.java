@@ -1,7 +1,7 @@
-package me.dags.commandbus.platform;
+package me.dags.commandbusold.platform;
 
-import me.dags.commandbus.CommandBus;
-import me.dags.commandbus.command.CommandContainer;
+import me.dags.commandbusold.CommandBus;
+import me.dags.commandbusold.command.CommandContainer;
 
 /**
  * @author dags <dags@dags.me>

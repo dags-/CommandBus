@@ -1,6 +1,6 @@
-package me.dags.commandbus.args;
+package me.dags.commandbusold.args;
 
-import me.dags.commandbus.annotation.Arg;
+import me.dags.commandbusold.annotation.Arg;
 
 /**
  * @author dags <dags@dags.me>

@@ -1,4 +1,4 @@
-package me.dags.commandbus.platform;
+package me.dags.commandbusold.platform;
 
 /**
  * @author dags <dags@dags.me>
@@ -7,13 +7,13 @@ package me.dags.commandbus.platform;
 public enum Platform
 {
     BUKKIT(""/*"me.dags.commandbus.platform.bukkit.BukkitPlatform"*/),
-    SPONGE("me.dags.commandbus.platform.sponge.SpongeRegistrar"),
+    SPONGE("me.dags.commandbus.platform.sponge.SpongePlatform"),
     NONE(""),
     ;
 
     private final String clazz;
 
-    Platform(String clazz)
+    private Platform(String clazz)
     {
         this.clazz = clazz;
     }
@@ -27,20 +27,20 @@ public enum Platform
         return Class.forName(clazz);
     }
 
-    public Registrar getPlatformRegistrar()
+    public PlatformRegistrar getPlatformRegistrar()
     {
         try
         {
             Class<?> c = getClazz();
             if (c != null)
             {
-                return Registrar.class.cast(c.newInstance());
+                return PlatformRegistrar.class.cast(c.newInstance());
             }
         }
         catch (ClassNotFoundException | InstantiationException | IllegalAccessException e)
         {
             e.printStackTrace();
         }
-        return (object, commandContainer, commandBus, list) -> {};
+        return (object, commandContainer, commandBus) -> {};
     }
 }

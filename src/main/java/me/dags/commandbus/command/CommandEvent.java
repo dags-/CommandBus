@@ -1,91 +1,47 @@
 package me.dags.commandbus.command;
 
-import me.dags.commandbus.args.CallerArg;
-import me.dags.commandbus.args.CommandArg;
-
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-/**
- * @author dags <dags@dags.me>
- */
-
 public class CommandEvent<T>
 {
-    private final Map<String, Value> flags = new HashMap<String, Value>();
-    private final T caller;
-    private String command;
+	private final Map<String, Value> args = new HashMap<>();
+	private final T caller;
+	private final String command;
 
-    public CommandEvent(T caller)
+	public CommandEvent(T caller, String command)
+	{
+		this.caller = caller;
+		this.command = command;
+	}
+
+	public T caller()
+	{
+		return caller;
+	}
+
+	public String command()
+	{
+		return command;
+	}
+
+    public boolean hasAlias(String arg)
     {
-        this.caller = caller;
+        return args.containsKey(arg.toLowerCase());
     }
 
-    public CommandEvent(T caller, String command)
-    {
-        this.caller = caller;
-        this.command = command;
-    }
-
-    protected CommandEvent<T> setCommand(String command)
-    {
-        this.command = command.toLowerCase();
-        return this;
-    }
-
-    public void add(String key, Object value)
-    {
-        flags.put(key.toLowerCase(), new Value(value));
-    }
-
-    public void add(String key, Value value)
-    {
-        flags.put(key.toLowerCase(), value);
-    }
-
-    public boolean has(String flag)
-    {
-        return flags.containsKey(flag.toLowerCase());
-    }
-
-    public String command()
-    {
-        return command;
-    }
-
-    public T caller()
-    {
-        return caller;
-    }
-
-    public int size()
-    {
-        return flags.size();
-    }
-
-    public boolean hasOneOf(String... flags)
-    {
-        for (String flag : flags)
-        {
-            if (has(flag))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public Value get(String flag)
-    {
-        return flags.get(flag.toLowerCase());
-    }
+	public Value get(String alias)
+	{
+		return args.get(alias.toLowerCase());
+	}
 
     public Value first(String... flag)
     {
         for (String s : flag)
         {
-            Value value = flags.get(s.toLowerCase());
+            Value value = args.get(s.toLowerCase());
             if (value != null)
             {
                 return value;
@@ -96,40 +52,89 @@ public class CommandEvent<T>
 
     public void ifPresent(String name, Consumer<Value> consumer)
     {
-        if (has(name))
+        if (hasAlias(name))
         {
-            consumer.accept(flags.get(name));
+            consumer.accept(args.get(name));
         }
     }
 
-    public String toString()
+	protected boolean exactMatch(List<Argument> arguments)
     {
-        StringBuilder sb = new StringBuilder("/").append(command());
-        for (Map.Entry<String, Value> e : flags.entrySet())
+        for (Map.Entry<String, Value> e : args.entrySet())
         {
-            sb.append(" ").append(e.getKey()).append(":").append(e.getValue());
-        }
-        return sb.toString();
-    }
-
-    protected Object get(CommandArg arg)
-    {
-        if (arg instanceof CallerArg && arg.type().isInstance(caller))
-        {
-            return caller;
-        }
-        if (arg.type().equals(CommandEvent.class))
-        {
-            return this;
-        }
-        for (String flag : arg.aliases())
-        {
-            Value value = flags.get(flag);
-            if (value != null)
+            boolean match = false;
+            outer:
+            for (Argument a : arguments)
             {
-                return value.as(arg.type());
+                for (String s : a.aliases())
+                {
+                    if (s.equalsIgnoreCase(e.getKey()))
+                    {
+                        match = true;
+                        break outer;
+                    }
+                }
+            }
+            if (!match)
+            {
+                return false;
             }
         }
-        return null;
+        return true;
     }
+
+    protected void add(String arg, Value value)
+    {
+        args.put(arg,  value);
+    }
+
+	protected Object callerOrEvent(Argument arg)
+	{
+		if (arg.type().isInstance(caller))
+		{
+			return caller;
+		}
+		return this;
+	}
+
+	protected Value get(Argument arg)
+	{
+		for (String alias : arg.aliases())
+		{
+			Value v = get(alias);
+			if (v != null)
+			{
+				return v;
+			}
+		}
+		return null;
+	}
+
+	protected boolean has(Argument arg)
+	{
+		if (!arg.isArg())
+		{
+			return arg.type().isInstance(caller) || arg.type().equals(this.getClass());
+		}
+		for (String alias : arg.aliases())
+		{
+			if (hasAlias(alias))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	@Override
+	public String toString()
+	{
+		StringBuilder sb = new StringBuilder();
+		sb.append("/").append(command);
+		for (Map.Entry<String, Value> e : args.entrySet())
+		{
+			sb.append(" ").append(e.getKey()).append(e.getValue().debug());
+		}
+		return sb.toString();
+	}
 }

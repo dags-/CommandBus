@@ -1,8 +1,7 @@
-package me.dags.commandbus.platform.sponge;
+package me.dags.commandbusold.platform.sponge;
 
-import me.dags.commandbus.CommandBus;
-import me.dags.commandbus.command.CommandContainer;
-import me.dags.commandbus.command.Result;
+import me.dags.commandbusold.CommandBus;
+import me.dags.commandbusold.command.CommandContainer;
 import org.spongepowered.api.command.CommandCallable;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
@@ -30,20 +29,13 @@ public class SpongeCommand implements CommandCallable
     @Override
     public CommandResult process(CommandSource commandSource, String s) throws CommandException
     {
-        String cmd = commandContainer.root() + " " + s;
-        Result result = commandBus.post(commandSource, cmd);
-        if (result.type == Result.Type.SUCCESS)
-        {
-            return CommandResult.success();
-        }
-        commandSource.sendMessage(Text.of(result.message));
         return CommandResult.empty();
     }
 
     @Override
     public List<String> getSuggestions(CommandSource commandSource, String s) throws CommandException
     {
-        return commandBus.registry().complete(commandContainer.root() + " " + s);
+        return commandBus.getRegister().matchCommands(s);
     }
 
     @Override

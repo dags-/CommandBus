@@ -1,8 +1,8 @@
-package me.dags.commandbus;
+package me.dags.commandbusold;
 
-import me.dags.commandbus.command.CommandContainer;
-import me.dags.commandbus.command.CommandEvent;
-import me.dags.commandbus.platform.PlatformRegistrar;
+import me.dags.commandbusold.command.CommandContainer;
+import me.dags.commandbusold.command.CommandEvent;
+import me.dags.commandbusold.platform.PlatformRegistrar;
 
 import java.util.*;
 import java.util.stream.Collectors;

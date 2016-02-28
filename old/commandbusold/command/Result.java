@@ -1,4 +1,4 @@
-package me.dags.commandbus.command;
+package me.dags.commandbusold.command;
 
 import java.util.function.Consumer;
 
@@ -38,13 +38,11 @@ public class Result
     public enum Type
     {
         CALL_ERROR("Command failed to execute correctly"),
-        INCORRECT_TYPE("Provided the wrong input type"),
-        MISSING_ARG("Missing argument"),
+        MISSING_FLAG("Missing or incorrect flags provided"),
         NO_PERMISSION("Missing permission"),
         NOT_RECOGNISED("Command not recognised"),
         PARSE_ERROR("Unable to parse input"),
         SUCCESS("Success"),
-        TOO_MANY_ARGS("Too many arguments provided"),
         ;
 
         private final String prefix;
