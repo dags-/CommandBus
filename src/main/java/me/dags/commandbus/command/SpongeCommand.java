@@ -57,6 +57,8 @@ public class SpongeCommand implements CommandExecutor
     private final CommandParameter[] parameters;
     protected final Set<SpongeCommand> children = new LinkedHashSet<>();
 
+    protected SpongeCommand parent = null;
+
     public SpongeCommand(Object owner, Method target)
     {
         Parameter[] parameters = target.getParameters();
@@ -81,6 +83,7 @@ public class SpongeCommand implements CommandExecutor
     public SpongeCommand child(SpongeCommand child)
     {
         children.add(child);
+        child.parent = this;
         return this;
     }
 
@@ -127,6 +130,36 @@ public class SpongeCommand implements CommandExecutor
         return builder.build();
     }
 
+    protected Optional<SpongeCommand> findMatch(String arg, CommandSource source, CommandContext context)
+    {
+        if (parent != null)
+        {
+            return parent.children.stream().filter(c -> c.matchFor(arg, source, context)).findFirst();
+        }
+        return Optional.empty();
+    }
+
+    protected boolean matchFor(String arg, CommandSource source, CommandContext context)
+    {
+        if (!this.main().equals(arg))
+        {
+            return false;
+        }
+        for (CommandParameter p : parameters)
+        {
+            if (p.callerParameter() && p.type().isInstance(source))
+            {
+                continue;
+            }
+            if (context.hasAny(p.key()))
+            {
+                continue;
+            }
+            return false;
+        }
+        return true;
+    }
+
     private CommandElement sequence()
     {
         List<CommandElement> elements = Stream.of(parameters)
@@ -149,29 +182,30 @@ public class SpongeCommand implements CommandExecutor
     @Override
     public CommandResult execute(CommandSource source, CommandContext context) throws CommandException
     {
-        Object[] params = new Object[parameters.length];
+        if (!this.matchFor(main(), source, context))
+        {
+            Optional<SpongeCommand> child = findMatch(main(), source, context);
+            if (child.isPresent())
+            {
+                return child.get().execute(source, context);
+            }
+            return CommandResult.empty();
+        }
+
         int i = 0;
+        Object[] params = new Object[parameters.length];
         for (CommandParameter p : parameters)
         {
             if (p.callerParameter())
             {
-                if (!p.type().isInstance(source))
-                {
-                    source.sendMessage(Text.of("Must be a " + p.type().getSimpleName() + " to execute this command!"));
-                    return CommandResult.empty();
-                }
                 params[i++] = source;
             }
             else
             {
-                Optional<?> optional = context.getOne(p.key());
-                if (!optional.isPresent())
-                {
-                    return CommandResult.empty();
-                }
-                params[i++] = optional.get();
+                params[i++] = context.getOne(p.key()).get();
             }
         }
+
         try
         {
             target.invoke(owner, params);
@@ -179,9 +213,8 @@ public class SpongeCommand implements CommandExecutor
         }
         catch (InvocationTargetException | IllegalAccessException e)
         {
-            e.printStackTrace();
+            return CommandResult.empty();
         }
-        return CommandResult.empty();
     }
 
     @Override

@@ -107,6 +107,6 @@ public class SpongeCommandDummy extends SpongeCommand
     @Override
     public String toString()
     {
-        return "/" + (isMain() ? main() : pathString()) + " (Dummy Command)";
+        return "/" + (isMain() ? main() : pathString()) + " - Command stub";
     }
 }

@@ -136,7 +136,7 @@ public class CommandParameter
         Function<String, CommandElement> f = types.get(type);
         if (f != null)
         {
-            return f.apply(key);
+            return GenericArguments.optional(f.apply(key));
         }
         return GenericArguments.none();
     }
