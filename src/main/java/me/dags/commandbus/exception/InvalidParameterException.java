@@ -22,26 +22,16 @@
  * THE SOFTWARE.
  */
 
-package me.dags.commandbus.annotation;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package me.dags.commandbus.exception;
 
 /**
  * @author dags <dags@dags.me>
  */
 
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.RUNTIME)
-public @interface Command
+public class InvalidParameterException extends RuntimeException
 {
-    String[] aliases();
-
-    String parent() default "";
-
-    String perm() default "";
-
-    String desc() default "";
+    public InvalidParameterException(Class<?> type)
+    {
+        super(String.format("%s is not a supported argument type!", type.getSimpleName()));
+    }
 }

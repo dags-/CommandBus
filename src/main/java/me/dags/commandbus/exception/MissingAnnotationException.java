@@ -22,26 +22,18 @@
  * THE SOFTWARE.
  */
 
-package me.dags.commandbus.annotation;
+package me.dags.commandbus.exception;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.reflect.Method;
 
 /**
  * @author dags <dags@dags.me>
  */
 
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.RUNTIME)
-public @interface Command
+public class MissingAnnotationException extends RuntimeException
 {
-    String[] aliases();
-
-    String parent() default "";
-
-    String perm() default "";
-
-    String desc() default "";
+    public MissingAnnotationException(Class<?> owner, Method method)
+    {
+        super(String.format("Command annotated method %s in %s contains an un-annotated parameter!", method.getName(), owner));
+    }
 }

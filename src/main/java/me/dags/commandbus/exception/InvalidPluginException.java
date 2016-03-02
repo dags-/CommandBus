@@ -22,26 +22,16 @@
  * THE SOFTWARE.
  */
 
-package me.dags.commandbus.annotation;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package me.dags.commandbus.exception;
 
 /**
  * @author dags <dags@dags.me>
  */
 
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.RUNTIME)
-public @interface Command
+public class InvalidPluginException extends RuntimeException
 {
-    String[] aliases();
-
-    String parent() default "";
-
-    String perm() default "";
-
-    String desc() default "";
+    public InvalidPluginException(Object object)
+    {
+        super(String.format("Object %s is not a valid plugin!", object));
+    }
 }

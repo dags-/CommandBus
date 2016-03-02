@@ -33,15 +33,9 @@ import java.lang.annotation.Target;
  * @author dags <dags@dags.me>
  */
 
-@Target(ElementType.METHOD)
+@Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Command
+public @interface Key
 {
-    String[] aliases();
-
-    String parent() default "";
-
-    String perm() default "";
-
-    String desc() default "";
+    String value();
 }

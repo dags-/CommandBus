@@ -22,26 +22,44 @@
  * THE SOFTWARE.
  */
 
-package me.dags.commandbus.annotation;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package me.dags.commandbus.command;
 
 /**
  * @author dags <dags@dags.me>
  */
 
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.RUNTIME)
-public @interface Command
+public class CommandPath
 {
-    String[] aliases();
+    private final String[] path;
 
-    String parent() default "";
+    public CommandPath(String in)
+    {
+        this.path = in.toLowerCase().split(" ");
+    }
 
-    String perm() default "";
+    public String at(int depth)
+    {
+        return depth < path.length ? path[depth] : "";
+    }
 
-    String desc() default "";
+    public String to(int depth)
+    {
+        StringBuilder sb = new StringBuilder(path[0]);
+        for (int i = 1; i <= depth && i < path.length; i++)
+            sb.append(" ").append(path[i]);
+        return sb.toString();
+    }
+
+    public String from(int depth)
+    {
+        StringBuilder sb = new StringBuilder(path[depth]);
+        for (int i = depth; i < maxDepth() && i < path.length; i++)
+            sb.append(" ").append(path[i]);
+        return sb.toString();
+    }
+
+    public int maxDepth()
+    {
+        return path.length - 1;
+    }
 }

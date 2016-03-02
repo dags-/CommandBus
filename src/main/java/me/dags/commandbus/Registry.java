@@ -1,128 +1,109 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) dags <https://dags.me>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 package me.dags.commandbus;
 
-import me.dags.commandbus.command.CommandContainer;
-import me.dags.commandbus.command.CommandEvent;
-import me.dags.commandbus.platform.Registrar;
+import me.dags.commandbus.command.SpongeCommand;
+import me.dags.commandbus.command.SpongeCommandDummy;
+import org.spongepowered.api.Sponge;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class Registry
-{
-	private final RegistryNode register = new RegistryNode();
-	private final List<String> suggestions = new ArrayList<>();
-	private final Registrar registrar;
+/**
+ * @author dags <dags@dags.me>
+ */
 
-    protected Registry(Registrar registrar)
+public final class Registry
+{
+    private final Set<SpongeCommand> commands = new HashSet<>();
+    private final CommandBus commandBus;
+
+    protected Registry(CommandBus commandBus)
     {
-        this.registrar = registrar;
+        this.commandBus = commandBus;
     }
 
-	protected void register(CommandBus commandBus, Object plugin, CommandContainer command)
-	{
-		RegistryNode target = register;
-		int length = command.command().split(" ").length;
+    protected void add(SpongeCommand command)
+    {
+        commands.add(command);
+    }
 
-		for (int i = 0; i < length; i++)
-		{
-			List<String> all = new ArrayList<>();
-			for (String s : command.aliases())
-			{
-				String[] split = s.split(" ");
-				if (split.length > i)
-				{
-					all.add(split[i]);
-				}
-			}
+    protected void submit(Object plugin)
+    {
+        commandBus.info("Building command trees");
 
-            if (all.isEmpty())
+        Map<String, SpongeCommand> mainCommands = new HashMap<>();
+        commandBus.info("Finding main commands");
+        commands.stream().filter(SpongeCommand::isMain).forEach(c -> mainCommands.put(c.main(), c));
+
+        commandBus.info("Assigning child commands");
+        commands.forEach(c -> findParent(c, mainCommands));
+
+        commandBus.info("Registering {} commands", mainCommands.size());
+        mainCommands.values().forEach(c -> Sponge.getCommandManager().register(plugin, c.spec(), c.aliases()));
+    }
+
+    private void findParent(SpongeCommand command, Map<String, SpongeCommand> mainCommands)
+    {
+        if (command.isMain())
+        {
+            mainCommands.put(command.main(), command);
+            return;
+        }
+
+        int depth = command.path().maxDepth();
+        while (depth > 0)
+        {
+            String path = command.path().to(depth);
+            Collection<SpongeCommand> found = find(path);
+            if (found.isEmpty())
             {
+                depth--;
+                continue;
+            }
+            found.forEach(c -> c.child(command));
+            return;
+        }
+
+        if (depth == 0)
+        {
+            String key = command.path().at(0);
+            if (mainCommands.containsKey(key))
+            {
+                mainCommands.get(key).child(command);
                 return;
             }
+        }
 
-			RegistryNode node = target.getOrCreate(all.get(0));
-			for (String a : all) target.addNode(a, node);
-            if (i == 0)
-            {
-                registrar.register(plugin, commandBus, command, all);
-            }
-			target = node;
-		}
-		target.add(command);
-
-        Collections.addAll(suggestions, command.aliases());
-	}
-
-	public List<String> listSuggestions(String in)
-	{
-		String match = in.toLowerCase();
-		return suggestions.stream().filter(s -> s.startsWith(match)).collect(Collectors.toList());
-	}
-
-	public List<String> listInfo(String in)
-	{
-		List<String> info = new ArrayList<>();
-		for (String s : listSuggestions(in))
-		{
-            info.addAll(get(s).stream().map(CommandContainer::toString).collect(Collectors.toList()));
-		}
-		return info;
-	}
-
-    public List<String> complete(String in)
-    {
-        return suggestions.stream()
-                .filter(s -> s.startsWith(in))
-                .map(s -> {
-                    int index = in.lastIndexOf(" ") + 1;
-                    return index > 0 && index < s.length() ? s.substring(index) : s.replace(in, "");
-                })
-                .collect(Collectors.toList());
+        SpongeCommandDummy dummy = new SpongeCommandDummy(command.path().at(depth), command.path().to(depth - 1));
+        dummy.child(command);
+        findParent(dummy, mainCommands);
     }
 
-	public List<String> listInfo()
-	{
-		return listInfo("");
-	}
-
-	protected Optional<CommandContainer> matchOne(CommandEvent<?> event)
-	{
-		for (CommandContainer c : get(event.command()))
-		{
-			if (c.exactMatchFor(event))
-			{
-				return Optional.of(c);
-			}
-            else
-            {
-                System.out.println(c + " does not match " + event);
-            }
-		}
-		return Optional.empty();
-	}
-
-    protected List<CommandContainer> matchAny(CommandEvent<?> event)
+    private Collection<SpongeCommand> find(String path)
     {
-        return get(event.command()).stream().filter(c -> c.matchFor(event)).collect(Collectors.toList());
+        return commands.stream().filter(c -> c.pathString().equals(path)).collect(Collectors.toList());
     }
-
-	protected List<CommandContainer> get(String path)
-	{
-		return get(path.split(" "));
-	}
-
-	protected List<CommandContainer> get(String...path)
-	{
-		RegistryNode node = register;
-		for (String s : path)
-		{
-			node = node.getNode(s);
-			if (node == null)
-			{
-				List<CommandContainer> result = Collections.emptyList();
-				return result;
-			}
-		}
-		return node.commands();
-	}
 }
