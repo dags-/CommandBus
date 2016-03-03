@@ -11,7 +11,7 @@ public class ExampleCommands {
         to.sendMessage(Text.of("" + from.getName() + " -> You: " + message));
     }
 
-    @Command(aliases = "pma", perm = "ExamplePlugin.pm.all", desc = "Send a private to all those whose name starts with <to>")
+    @Command(aliases = "pma", perm = "ExamplePlugin.pm.all", desc = "Send a private message to all those whose name starts with <to>")
     public void messageAll(@Caller CommandSource from, @All("to") Collection<Player> to, @Join("message") String message) {
         from.sendMessage(Text.of("You -> ToAll: " + message));
         to.stream().filter(p -> p != from).forEach(p -> p.sendMessage(Text.of("" + from.getName() + " -> You: " + message)));
