@@ -28,10 +28,10 @@ package me.dags.commandbus.exception;
  * @author dags <dags@dags.me>
  */
 
-public class InvalidParameterException extends RuntimeException
+public class CommandRegistrationException extends RuntimeException
 {
-    public InvalidParameterException(Class<?> type)
+    public CommandRegistrationException(String warn, Object... args)
     {
-        super(String.format("%s is not a supported argument type!", type.getSimpleName()));
+        super(String.format(warn, args));
     }
 }

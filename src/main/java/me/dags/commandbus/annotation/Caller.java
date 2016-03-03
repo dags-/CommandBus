@@ -33,6 +33,9 @@ import java.lang.annotation.Target;
  * @author dags <dags@dags.me>
  */
 
+/**
+ * Used to mark a given method parameter as the expected CommandSource of a given Command.
+ */
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Caller

@@ -24,16 +24,14 @@
 
 package me.dags.commandbus.exception;
 
-import java.lang.reflect.Method;
-
 /**
  * @author dags <dags@dags.me>
  */
 
-public class MissingAnnotationException extends RuntimeException
+public class ParameterAnnotationException extends RuntimeException
 {
-    public MissingAnnotationException(Class<?> owner, Method method)
+    public ParameterAnnotationException(String warn, Object... args)
     {
-        super(String.format("Command annotated method %s in %s contains an un-annotated parameter!", method.getName(), owner));
+        super(String.format(warn, args));
     }
 }

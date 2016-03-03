@@ -35,13 +35,13 @@ import org.spongepowered.api.text.Text;
  * @author dags <dags@dags.me>
  */
 
-public class SpongeCommandDummy extends SpongeCommand
+public class SpongeCommandStub extends SpongeCommand
 {
     private final String alias;
     private final String parent;
     private final CommandPath path;
 
-    public SpongeCommandDummy(String alias, String path)
+    public SpongeCommandStub(String alias, String path)
     {
         this.alias = alias;
         this.parent = path;

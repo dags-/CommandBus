@@ -22,12 +22,10 @@
  * THE SOFTWARE.
  */
 
-package me.dags.commandbus.test.annotation;
+package me.dags.example;
 
 import me.dags.commandbus.CommandBus;
-import me.dags.commandbus.annotation.Caller;
-import me.dags.commandbus.annotation.Command;
-import me.dags.commandbus.annotation.Key;
+import me.dags.commandbus.annotation.*;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.event.Listener;
@@ -35,46 +33,34 @@ import org.spongepowered.api.event.game.state.GameInitializationEvent;
 import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.api.text.Text;
 
+import java.util.Collection;
+
 /**
  * @author dags <dags@dags.me>
  */
 
-@Plugin(name = "test", id = "test")
-public class Test
+@Plugin(name = "ExamplePlugin", id = "ExamplePlugin")
+public class ExamplePlugin
 {
     @Listener
     public void init(GameInitializationEvent event)
     {
-        new CommandBus(this).register(this).submitCommands();
+        CommandBus bus = new CommandBus();
+        bus.register(this);
+        bus.submit(this);
     }
 
-    @Command(aliases = "c1", perm = "c1.node", desc = "Prints (name) to the user")
-    public void command1(@Caller CommandSource player, @Key("name") String name)
+    @Command(aliases = "pm", perm = "ExamplePlugin.pm.send", desc = "Send a private message to someone")
+    public void message(@Caller CommandSource from, @One("to") Player to, @Join("message") String message)
     {
-        player.sendMessage(Text.of("C1: " + name));
+        from.sendMessage(Text.of("You -> " + to.getName() + ": " + message));
+        to.sendMessage(Text.of("" + from.getName() + " -> You: " + message));
     }
 
-    @Command(aliases = "s1", parent = "c1")
-    public void subCommand1(@Caller Player player, @Key("name") String name)
+    @Command(aliases = "pma", perm = "ExamplePlugin.pm.send", desc = "Send a private to all those whose name starts with <to>")
+    public void messageAll(@Caller CommandSource from, @All("to") Collection<Player> to, @Join("message") String message)
     {
-        player.sendMessage(Text.of("SUB1: " + name));
-    }
-
-    @Command(aliases = "s2", parent = "c1", desc = "Prints the (int) to the user")
-    public void subCommand2(@Caller Player player, @Key("number") int number)
-    {
-        player.sendMessage(Text.of("SUB2: " + number));
-    }
-
-    @Command(aliases = "s3", parent = "c1 s2", desc = "Prints the (string)name & (int)number")
-    public void subCommand3(@Caller Player player, @Key("name") String name, @Key("number") int number)
-    {
-        player.sendMessage(Text.of("SUB3 name:" + name + ", number: " + number));
-    }
-
-    @Command(aliases = "s4", parent = "c2 s2")
-    public void subCommand4(@Caller Player player, @Key("name") String name, @Key("number") int number)
-    {
-        player.sendMessage(Text.of("SUB3 name:" + name + ", number: " + number));
+        from.sendMessage(Text.of("You -> ToAll: " + message));
+        to.stream().filter(p -> p != from).forEach(p -> p.sendMessage(Text.of("" + from.getName() + " -> You: " + message)));
     }
 }

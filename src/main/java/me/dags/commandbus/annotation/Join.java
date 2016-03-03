@@ -33,9 +33,13 @@ import java.lang.annotation.Target;
  * @author dags <dags@dags.me>
  */
 
+/**
+ * Used to mark a Method Parameter that accepts the remaining arguments in a given command
+ * as a single String.
+ */
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Key
+public @interface Join
 {
     String value();
 }

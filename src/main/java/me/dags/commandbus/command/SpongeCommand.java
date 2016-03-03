@@ -25,6 +25,8 @@
 package me.dags.commandbus.command;
 
 import me.dags.commandbus.annotation.Command;
+import me.dags.commandbus.exception.ParameterAnnotationException;
+
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
@@ -68,7 +70,12 @@ public class SpongeCommand implements CommandExecutor
         this.parameters = new CommandParameter[parameters.length];
         for (int i = 0; i < parameters.length; i++)
         {
-            this.parameters[i] = new CommandParameter(owner, target, parameters[i]);
+            this.parameters[i] = CommandParameter.from(owner, target, parameters[i]);
+            if (this.parameters[i].join() && i + 1 < parameters.length)
+            {
+                String warn = "The @Retaining annotation should only by used on the last Paramter in a Method: %s in %s";
+                throw new ParameterAnnotationException(warn, target.getName(), owner);
+            }
         }
     }
 
@@ -147,7 +154,7 @@ public class SpongeCommand implements CommandExecutor
         }
         for (CommandParameter p : parameters)
         {
-            if (p.callerParameter() && p.type().isInstance(source))
+            if (p.caller() && p.type().isInstance(source))
             {
                 continue;
             }
@@ -163,7 +170,7 @@ public class SpongeCommand implements CommandExecutor
     private CommandElement sequence()
     {
         List<CommandElement> elements = Stream.of(parameters)
-                .filter(p -> !p.callerParameter())
+                .filter(p -> !p.caller())
                 .map(CommandParameter::element)
                 .collect(Collectors.toList());
 
@@ -196,13 +203,20 @@ public class SpongeCommand implements CommandExecutor
         Object[] params = new Object[parameters.length];
         for (CommandParameter p : parameters)
         {
-            if (p.callerParameter())
+            if (p.caller())
             {
                 params[i++] = source;
             }
             else
             {
-                params[i++] = context.getOne(p.key()).get();
+                if (p.collect())
+                {
+                    params[i++] = context.getAll(p.key());
+                }
+                else
+                {
+                    params[i++] = context.getOne(p.key()).get();
+                }
             }
         }
 
@@ -225,7 +239,7 @@ public class SpongeCommand implements CommandExecutor
         sb.append(main());
         for (CommandParameter parameter : parameters)
         {
-            if (!parameter.callerParameter())
+            if (!parameter.caller())
             {
                 sb.append(" ").append(parameter);
             }

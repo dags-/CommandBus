@@ -25,10 +25,11 @@
 package me.dags.commandbus.command;
 
 import com.flowpowered.math.vector.Vector3d;
-import me.dags.commandbus.exception.InvalidParameterException;
 import me.dags.commandbus.annotation.Caller;
-import me.dags.commandbus.annotation.Key;
-import me.dags.commandbus.exception.MissingAnnotationException;
+import me.dags.commandbus.annotation.All;
+import me.dags.commandbus.annotation.One;
+import me.dags.commandbus.annotation.Join;
+import me.dags.commandbus.exception.ParameterAnnotationException;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.entity.living.player.Player;
@@ -38,6 +39,8 @@ import org.spongepowered.api.world.World;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -53,30 +56,16 @@ public class CommandParameter
     private final String key;
     private final Class<?> type;
     private final boolean caller;
+    private final boolean all;
+    private final boolean join;
 
-    public CommandParameter(Object owner, Method method, Parameter parameter)
+    private CommandParameter(String key, Class<?> type, boolean caller, boolean collect, boolean remaining)
     {
-        if (parameter.isAnnotationPresent(Caller.class))
-        {
-            this.caller = true;
-            this.key = "@";
-            this.type = parameter.getType();
-        }
-        else if (parameter.isAnnotationPresent(Key.class))
-        {
-            if (!CommandParameter.validParameterType(parameter.getType()))
-            {
-                throw new InvalidParameterException(parameter.getType());
-            }
-            Key key = parameter.getAnnotation(Key.class);
-            this.caller = false;
-            this.key = key.value();
-            this.type = parameter.getType();
-        }
-        else
-        {
-            throw new MissingAnnotationException(owner.getClass(), method);
-        }
+        this.key = key;
+        this.type = type;
+        this.caller = caller;
+        this.all = collect;
+        this.join = remaining;
     }
 
     public String key()
@@ -89,16 +78,30 @@ public class CommandParameter
         return type;
     }
 
-    public boolean callerParameter()
+    public boolean caller()
     {
         return caller;
     }
 
+    public boolean collect()
+    {
+        return all;
+    }
+
+    public boolean join()
+    {
+        return join;
+    }
+
     public CommandElement element()
     {
-        if (caller)
+        if (caller())
         {
             return GenericArguments.none();
+        }
+        if (join())
+        {
+            return GenericArguments.remainingJoinedStrings(Text.of(key));
         }
         return CommandParameter.of(type, key);
     }
@@ -107,6 +110,53 @@ public class CommandParameter
     public String toString()
     {
         return "<" + key + ">";
+    }
+
+    protected static CommandParameter from(Object owner, Method method, Parameter parameter)
+    {
+        if (parameter.isAnnotationPresent(Caller.class))
+        {
+            return new CommandParameter("@", parameter.getType(), true, false, false);
+        }
+        else if (parameter.isAnnotationPresent(All.class))
+        {
+            if (!Collection.class.equals(parameter.getType()))
+            {
+                String warn = "Parameter %s in Method %s in Class %s is annotated with @Collect but is not of type %s";
+                throw new ParameterAnnotationException(warn, parameter, method.getName(), owner.getClass(), Collection.class);
+            }
+            ParameterizedType paramT = (ParameterizedType) parameter.getParameterizedType();
+            Class<?> type = (Class<?>) paramT.getActualTypeArguments()[0];
+            CommandParameter.typeCheck(type, parameter, method, owner);
+            All collect = parameter.getAnnotation(All.class);
+            return new CommandParameter(collect.value(), type, false, true, false);
+        }
+        else if (parameter.isAnnotationPresent(One.class))
+        {
+            CommandParameter.typeCheck(parameter.getType(), parameter, method, owner);
+            One key = parameter.getAnnotation(One.class);
+            return new CommandParameter(key.value(), parameter.getType(), false, false, false);
+        }
+        else if (parameter.isAnnotationPresent(Join.class))
+        {
+            CommandParameter.typeCheck(parameter.getType(), parameter, method, owner);
+            Join remaining = parameter.getAnnotation(Join.class);
+            return new CommandParameter(remaining.value(), parameter.getType(), false, false, true);
+        }
+        else
+        {
+            String warn = "Command Method %s in %s contains an un-annotated parameter %s";
+            throw new ParameterAnnotationException(warn, method.getName(), owner.getClass(), parameter);
+        }
+    }
+
+    private static void typeCheck(Class<?> type, Parameter source, Method method, Object owner)
+    {
+        if (!CommandParameter.validParameterType(type))
+        {
+            String warn = "Parameter %s in Method %s in Class %s is not supported!";
+            throw new ParameterAnnotationException(warn, source, method.getName(), owner.getClass());
+        }
     }
 
     private static Map<Class<?>, Function<String, CommandElement>> init()

@@ -26,7 +26,7 @@ package me.dags.commandbus;
 
 import me.dags.commandbus.annotation.Command;
 import me.dags.commandbus.command.SpongeCommand;
-import me.dags.commandbus.exception.InvalidPluginException;
+import me.dags.commandbus.exception.CommandRegistrationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.api.Sponge;
@@ -39,27 +39,59 @@ import java.util.Optional;
  * @author dags <dags@dags.me>
  */
 
+/**
+ * The CommandBus handles the processing of Objects/Classes utilising
+ * the @Command annotation.
+ * Commands should first be registered via the register() methods, and finally,
+ * submitted to Sponge via the submit() method - all subcommands of a given command
+ * should be registered through the same CommandBus instance, before being submitted.
+ */
 public final class CommandBus
 {
-    private final Logger logger = LoggerFactory.getLogger(CommandBus.class);
     private final Registry registry = new Registry(this);
     private final boolean logging;
-    private final Object plugin;
+    private final Logger logger;
 
-    public CommandBus(Object plugin)
+    /**
+     * Create a new default CommandBus instance.
+     */
+    public CommandBus()
     {
-        checkPlugin(plugin);
-        this.plugin = plugin;
-        this.logging = true;
+        this(true);
     }
 
-    public CommandBus(Object plugin, boolean logging)
+    /**
+     * Create a new CommandBus instance with logging optionally enabled/disabled.
+     *
+     * @param logging Sets CommandBus logging enabled/disabled.
+     */
+    public CommandBus(boolean logging)
     {
-        checkPlugin(plugin);
-        this.plugin = plugin;
         this.logging = logging;
+        this.logger = LoggerFactory.getLogger(CommandBus.class);
     }
 
+    /**
+     * Create a new CommandBus instance that will log via the given Logger
+     * rather than the default CommandBus logger.
+     *
+     * @param logger The alternative Logger for CommandBus to use.
+     */
+    public CommandBus(Logger logger)
+    {
+        this.logging = true;
+        this.logger = logger;
+    }
+
+    /**
+     * Register Commands for the given class.
+     * CommandBus will attempt to create a new instance and then register
+     * it's Methods annotated with @Command. The class must have an accessible
+     * default constructor.
+     *
+     * @param clazz The class to register.
+     * @return The current CommandBus instance (for chaining).
+     */
     public CommandBus register(Class<?> clazz)
     {
         info("Attempting to instantiate class {}", clazz);
@@ -76,6 +108,16 @@ public final class CommandBus
         return this;
     }
 
+    /**
+     * Register Commands for the given object.
+     * CommandBus will search for Methods annotated with @Command
+     * and generate a Command from the provided infomation and Method
+     * Parameters.
+     * This method also searches through an object's super class heirarchy.
+     *
+     * @param object The object to register.
+     * @return The current CommandBus instance (for chaining).
+     */
     public CommandBus register(Object object)
     {
         Class<?> c = object.getClass();
@@ -99,16 +141,23 @@ public final class CommandBus
         return this;
     }
 
-    public CommandBus submitCommands()
+    /**
+     * Submits registered Commands to Sponge.
+     * This method should be called after Command classes/objects have been
+     * registered via the register() methods.
+     *
+     * @param plugin The Plugin associated with the Commands to be registered.
+     */
+    public void submit(Object plugin)
     {
         Optional<PluginContainer> container = Sponge.getPluginManager().fromInstance(plugin);
         if (!container.isPresent())
         {
-            throw new InvalidPluginException(plugin);
+            String warn = "Attempted to register commands for %s, but it is not a valid Sponge Plugin!";
+            throw new CommandRegistrationException(warn, plugin.getClass());
         }
         info("Registering commands for {}", container.get().getName());
         registry.submit(plugin);
-        return this;
     }
 
     protected void info(String message, Object... args)
@@ -132,15 +181,6 @@ public final class CommandBus
         if (logging)
         {
             logger.error(message, args);
-        }
-    }
-
-    private static void checkPlugin(Object plugin)
-    {
-        Optional<PluginContainer> container = Sponge.getPluginManager().fromInstance(plugin);
-        if (!container.isPresent())
-        {
-            throw new InvalidPluginException(plugin);
         }
     }
 }

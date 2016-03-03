@@ -25,7 +25,7 @@
 package me.dags.commandbus;
 
 import me.dags.commandbus.command.SpongeCommand;
-import me.dags.commandbus.command.SpongeCommandDummy;
+import me.dags.commandbus.command.SpongeCommandStub;
 import org.spongepowered.api.Sponge;
 
 import java.util.*;
@@ -97,7 +97,7 @@ public final class Registry
             }
         }
 
-        SpongeCommandDummy dummy = new SpongeCommandDummy(command.path().at(depth), command.path().to(depth - 1));
+        SpongeCommandStub dummy = new SpongeCommandStub(command.path().at(depth), command.path().to(depth - 1));
         dummy.child(command);
         findParent(dummy, mainCommands);
     }

@@ -22,16 +22,23 @@
  * THE SOFTWARE.
  */
 
-package me.dags.commandbus.exception;
+package me.dags.commandbus.annotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * @author dags <dags@dags.me>
  */
 
-public class InvalidPluginException extends RuntimeException
+/**
+ * Used to mark a Method Parameter that accepts a Collection of a given argument type.
+ */
+@Target(ElementType.PARAMETER)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface All
 {
-    public InvalidPluginException(Object object)
-    {
-        super(String.format("Object %s is not a valid plugin!", object));
-    }
+    String value();
 }
