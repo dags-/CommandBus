@@ -22,7 +22,7 @@
  * THE SOFTWARE.
  */
 
-package me.dags.example;
+package me.dags;
 
 import me.dags.commandbus.CommandBus;
 import me.dags.commandbus.annotation.*;
@@ -51,16 +51,46 @@ public class ExamplePlugin
     }
 
     @Command(aliases = "pm", perm = "ExamplePlugin.pm.send", desc = "Send a private message to someone")
-    public void message(@Caller CommandSource from, @One("to") Player to, @Join("message") String message)
+    public void message(@Caller CommandSource from, @One Player to, @Join String message)
     {
         from.sendMessage(Text.of("You -> " + to.getName() + ": " + message));
         to.sendMessage(Text.of("" + from.getName() + " -> You: " + message));
     }
 
     @Command(aliases = "pma", perm = "ExamplePlugin.pm.send", desc = "Send a private to all those whose name starts with <to>")
-    public void messageAll(@Caller CommandSource from, @All("to") Collection<Player> to, @Join("message") String message)
+    public void messageAll(@Caller CommandSource from, @All Collection<Player> to, @Join String message)
     {
         from.sendMessage(Text.of("You -> ToAll: " + message));
         to.stream().filter(p -> p != from).forEach(p -> p.sendMessage(Text.of("" + from.getName() + " -> You: " + message)));
+    }
+
+    @Command(aliases = "test")
+    public void test(@Caller CommandSource from, @Join String message)
+    {
+        from.sendMessage(Text.of("TEST: " + message));
+    }
+
+    @Command(aliases = "a", parent = "test")
+    public void test2(@Caller CommandSource from, @Join String message)
+    {
+        from.sendMessage(Text.of("TEST A: " + message));
+    }
+
+    @Command(aliases = "b", parent = "test a")
+    public void test3(@Caller CommandSource from, @Join String message)
+    {
+        from.sendMessage(Text.of("TEST A B : " + message));
+    }
+
+    @Command(aliases = "c", parent = "chest y")
+    public void test3a(@Caller CommandSource from, @One int message, @Join String string)
+    {
+        from.sendMessage(Text.of("TEST A BB : " + message + ":" + string));
+    }
+
+    @Command(aliases = "c", parent = "anothertest")
+    public void test4(@Caller CommandSource from, @Join String message)
+    {
+        from.sendMessage(Text.of("TEST C: " + message));
     }
 }

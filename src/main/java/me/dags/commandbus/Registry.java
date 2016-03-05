@@ -24,12 +24,15 @@
 
 package me.dags.commandbus;
 
+import me.dags.commandbus.command.CommandPath;
 import me.dags.commandbus.command.SpongeCommand;
-import me.dags.commandbus.command.SpongeCommandStub;
+import me.dags.commandbus.command.SpongeCommandBase;
 import org.spongepowered.api.Sponge;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * @author dags <dags@dags.me>
@@ -37,7 +40,7 @@ import java.util.stream.Collectors;
 
 public final class Registry
 {
-    private final Set<SpongeCommand> commands = new HashSet<>();
+    private final Set<SpongeCommandBase> commands = new HashSet<>();
     private final CommandBus commandBus;
 
     protected Registry(CommandBus commandBus)
@@ -54,9 +57,9 @@ public final class Registry
     {
         commandBus.info("Building command trees");
 
-        Map<String, SpongeCommand> mainCommands = new HashMap<>();
+        Map<String, SpongeCommandBase> mainCommands = new HashMap<>();
         commandBus.info("Finding main commands");
-        commands.stream().filter(SpongeCommand::isMain).forEach(c -> mainCommands.put(c.main(), c));
+        commands.stream().filter(SpongeCommandBase::isMain).forEach(c -> mainCommands.put(c.alias(), c));
 
         commandBus.info("Assigning child commands");
         commands.forEach(c -> findParent(c, mainCommands));
@@ -68,45 +71,33 @@ public final class Registry
         commands.clear();
     }
 
-    private void findParent(SpongeCommand command, Map<String, SpongeCommand> mainCommands)
+    private void findParent(SpongeCommandBase command, Map<String, SpongeCommandBase> rootCommands)
     {
         if (command.isMain())
         {
-            mainCommands.put(command.main(), command);
+            rootCommands.put(command.alias(), command);
             return;
         }
 
-        int depth = command.path().maxDepth();
-        while (depth > 0)
+        CommandPath path = command.path();
+        String parentPath = path.all();
+        if (rootCommands.containsKey(parentPath))
         {
-            String path = command.path().to(depth);
-            Collection<SpongeCommand> found = find(path);
-            if (found.isEmpty())
-            {
-                depth--;
-                continue;
-            }
-            found.forEach(c -> c.child(command));
+            rootCommands.get(parentPath).addChild(command);
             return;
         }
 
-        if (depth == 0)
+        for (SpongeCommandBase c : commands)
         {
-            String key = command.path().at(0);
-            if (mainCommands.containsKey(key))
+            if (c.command().equals(parentPath))
             {
-                mainCommands.get(key).child(command);
+                c.addChild(command);
                 return;
             }
         }
 
-        SpongeCommandStub dummy = new SpongeCommandStub(command.path().at(depth), command.path().to(depth - 1));
-        dummy.child(command);
-        findParent(dummy, mainCommands);
-    }
-
-    private Collection<SpongeCommand> find(String path)
-    {
-        return commands.stream().filter(c -> c.command().equals(path)).collect(Collectors.toList());
+        String stubPath = path.to(path.maxDepth() - 1);
+        String stubAlias = path.at(path.maxDepth());
+        findParent(new SpongeCommandBase(stubPath, stubAlias).addChild(command), rootCommands);
     }
 }

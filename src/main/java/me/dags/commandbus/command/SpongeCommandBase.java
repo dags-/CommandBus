@@ -28,29 +28,36 @@ import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
+import org.spongepowered.api.command.spec.CommandExecutor;
 import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.text.Text;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * @author dags <dags@dags.me>
  */
 
-public class SpongeCommandStub extends SpongeCommand
+public class SpongeCommandBase implements CommandExecutor
 {
-    private final String alias;
-    private final String parent;
+    private final String[] aliases;
+    private final String parentPath;
     private final CommandPath path;
+    protected final Set<SpongeCommandBase> children = new LinkedHashSet<>();
 
-    public SpongeCommandStub(String alias, String path)
+    protected SpongeCommandBase parent = null;
+
+    public SpongeCommandBase(String parent, String... alias)
     {
-        this.alias = alias;
-        this.parent = path;
-        this.path = new CommandPath(path);
+        this.aliases = alias;
+        this.parentPath = parent;
+        this.path = new CommandPath(parent);
     }
 
     public boolean isMain()
     {
-        return parent.equals(alias);
+        return parentPath.isEmpty();
     }
 
     public CommandPath path()
@@ -60,17 +67,24 @@ public class SpongeCommandStub extends SpongeCommand
 
     public String command()
     {
-        return path() + " " + main();
+        return isMain() ? alias() : parentPath + " " + alias();
     }
 
-    public String main()
+    public String alias()
     {
-        return alias;
+        return aliases[0];
     }
 
     public String[] aliases()
     {
-        return new String[]{alias};
+        return aliases;
+    }
+
+    public SpongeCommandBase addChild(SpongeCommandBase child)
+    {
+        children.add(child);
+        child.parent = this;
+        return this;
     }
 
     public CommandSpec spec()
@@ -98,6 +112,11 @@ public class SpongeCommandStub extends SpongeCommand
         });
     }
 
+    protected boolean matchFor(String arg, CommandSource source, CommandContext context)
+    {
+        return false;
+    }
+
     @Override
     public CommandResult execute(CommandSource source, CommandContext context) throws CommandException
     {
@@ -107,6 +126,6 @@ public class SpongeCommandStub extends SpongeCommand
     @Override
     public String toString()
     {
-        return "/" + (isMain() ? main() : command()) + " - Command stub";
+        return "/" + (isMain() ? alias() : command()) + " - Command stub";
     }
 }

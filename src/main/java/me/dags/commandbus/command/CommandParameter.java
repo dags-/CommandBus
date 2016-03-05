@@ -40,9 +40,7 @@ import org.spongepowered.api.world.World;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 
 /**
@@ -53,15 +51,34 @@ public class CommandParameter
 {
     private static final Map<Class<?>, Function<String, CommandElement>> types = init();
 
+    private static Map<Class<?>, Function<String, CommandElement>> init()
+    {
+        Map<Class<?>, Function<String, CommandElement>> map = new HashMap<>();
+        map.put(boolean.class, s -> GenericArguments.bool(Text.of(s)));
+        map.put(Boolean.class, map.get(boolean.class));
+        map.put(double.class, s -> GenericArguments.doubleNum(Text.of(s)));
+        map.put(Double.class, map.get(double.class));
+        map.put(int.class, s -> GenericArguments.integer(Text.of(s)));
+        map.put(Integer.class, map.get(int.class));
+        map.put(Location.class, s -> GenericArguments.location(Text.of(s)));
+        map.put(Player.class, s -> GenericArguments.player(Text.of(s)));
+        map.put(String.class, s -> GenericArguments.string(Text.of(s)));
+        map.put(Vector3d.class, s -> GenericArguments.vector3d(Text.of(s)));
+        map.put(World.class, s -> GenericArguments.world(Text.of(s)));
+        return Collections.unmodifiableMap(map);
+    }
+
     private final String key;
     private final Class<?> type;
+    private final boolean idKey;
     private final boolean caller;
     private final boolean all;
     private final boolean join;
 
-    private CommandParameter(String key, Class<?> type, boolean caller, boolean collect, boolean remaining)
+    private CommandParameter(String key, int id, Class<?> type, boolean caller, boolean collect, boolean remaining)
     {
-        this.key = key;
+        this.idKey = key.isEmpty();
+        this.key = idKey ? "" + id : key;
         this.type = type;
         this.caller = caller;
         this.all = collect;
@@ -109,14 +126,14 @@ public class CommandParameter
     @Override
     public String toString()
     {
-        return "<" + key + ">";
+        return "<" + (idKey ? type().getSimpleName().toLowerCase() : key) + ">";
     }
 
-    protected static CommandParameter from(Object owner, Method method, Parameter parameter)
+    protected static CommandParameter from(Object owner, Method method, Parameter parameter, int id)
     {
         if (parameter.isAnnotationPresent(Caller.class))
         {
-            return new CommandParameter("@", parameter.getType(), true, false, false);
+            return new CommandParameter("@", id, parameter.getType(), true, false, false);
         }
         else if (parameter.isAnnotationPresent(All.class))
         {
@@ -129,19 +146,19 @@ public class CommandParameter
             Class<?> type = (Class<?>) paramT.getActualTypeArguments()[0];
             CommandParameter.typeCheck(type, parameter, method, owner);
             All collect = parameter.getAnnotation(All.class);
-            return new CommandParameter(collect.value(), type, false, true, false);
+            return new CommandParameter(collect.value(), id, type, false, true, false);
         }
         else if (parameter.isAnnotationPresent(One.class))
         {
             CommandParameter.typeCheck(parameter.getType(), parameter, method, owner);
-            One key = parameter.getAnnotation(One.class);
-            return new CommandParameter(key.value(), parameter.getType(), false, false, false);
+            One one = parameter.getAnnotation(One.class);
+            return new CommandParameter(one.value(), id, parameter.getType(), false, false, false);
         }
         else if (parameter.isAnnotationPresent(Join.class))
         {
             CommandParameter.typeCheck(parameter.getType(), parameter, method, owner);
             Join remaining = parameter.getAnnotation(Join.class);
-            return new CommandParameter(remaining.value(), parameter.getType(), false, false, true);
+            return new CommandParameter(remaining.value(), id, parameter.getType(), false, false, true);
         }
         else
         {
@@ -157,23 +174,6 @@ public class CommandParameter
             String warn = "Parameter %s in Method %s in Class %s is not supported!";
             throw new ParameterAnnotationException(warn, source, method.getName(), owner.getClass());
         }
-    }
-
-    private static Map<Class<?>, Function<String, CommandElement>> init()
-    {
-        Map<Class<?>, Function<String, CommandElement>> map = new HashMap<>();
-        map.put(boolean.class, s -> GenericArguments.bool(Text.of(s)));
-        map.put(Boolean.class, map.get(boolean.class));
-        map.put(double.class, s -> GenericArguments.doubleNum(Text.of(s)));
-        map.put(Double.class, map.get(double.class));
-        map.put(int.class, s -> GenericArguments.integer(Text.of(s)));
-        map.put(Integer.class, map.get(int.class));
-        map.put(Location.class, s -> GenericArguments.location(Text.of(s)));
-        map.put(Player.class, s -> GenericArguments.player(Text.of(s)));
-        map.put(String.class, s -> GenericArguments.string(Text.of(s)));
-        map.put(Vector3d.class, s -> GenericArguments.vector3d(Text.of(s)));
-        map.put(World.class, s -> GenericArguments.world(Text.of(s)));
-        return map;
     }
 
     public static boolean validParameterType(Class<?> type)

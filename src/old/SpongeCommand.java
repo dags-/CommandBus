@@ -32,14 +32,17 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.GenericArguments;
+import org.spongepowered.api.command.spec.CommandExecutor;
 import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.text.Text;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -47,28 +50,28 @@ import java.util.stream.Stream;
  * @author dags <dags@dags.me>
  */
 
-public class SpongeCommand extends SpongeCommandBase
+public class SpongeCommand implements CommandExecutor
 {
     private final Object owner;
     private final Method target;
-    private final String permission;
-    private final String description;
+    private final Command command;
+    private final CommandPath path;
     private final CommandParameter[] parameters;
+    protected final Set<SpongeCommand> children = new LinkedHashSet<>();
 
-    public SpongeCommand(Object owner, Method target, Command command)
+    protected SpongeCommand parent = null;
+
+    public SpongeCommand(Object owner, Method target)
     {
-        super(command.parent(), command.aliases());
-
         Parameter[] parameters = target.getParameters();
-
         this.owner = owner;
         this.target = target;
-        this.permission = command.perm();
-        this.description = command.desc();
+        this.command = target.getAnnotation(Command.class);
+        this.path = new CommandPath(command.parent());
         this.parameters = new CommandParameter[parameters.length];
         for (int i = 0; i < parameters.length; i++)
         {
-            this.parameters[i] = CommandParameter.from(owner, target, parameters[i], i);
+            this.parameters[i] = CommandParameter.from(owner, target, parameters[i]);
             if (this.parameters[i].join() && i + 1 < parameters.length)
             {
                 String warn = "The @Retaining annotation should only by used on the last Paramter in a Method: %s in %s";
@@ -77,26 +80,66 @@ public class SpongeCommand extends SpongeCommandBase
         }
     }
 
+    protected SpongeCommand()
+    {
+        owner = null;
+        target = null;
+        command = null;
+        path = null;
+        parameters = null;
+    }
+
+    public SpongeCommand child(SpongeCommand child)
+    {
+        children.add(child);
+        child.parent = this;
+        return this;
+    }
+
+    public boolean isMain()
+    {
+        return command.parent().isEmpty();
+    }
+
+    public CommandPath path()
+    {
+        return path;
+    }
+
+    public String command()
+    {
+        return command.parent() + " " + main();
+    }
+
+    public String main()
+    {
+        return command.aliases()[0];
+    }
+
+    public String[] aliases()
+    {
+        return command.aliases();
+    }
+
     public CommandSpec spec()
     {
         CommandSpec.Builder builder = CommandSpec.builder();
 
-        Text desc = Text.of(description.isEmpty() ? this.toString() : description);
         Text.Builder extendedInfo = Text.builder();
         appendExtendedInfo(extendedInfo);
+        Text description = Text.of(command.desc().isEmpty() ? this.toString() : command.desc());
 
         children.forEach(c -> builder.child(c.spec(), c.aliases()));
 
-        if (!permission.isEmpty()) builder.permission(permission);
         builder.extendedDescription(extendedInfo.build());
+        builder.description(description);
         builder.arguments(sequence());
-        builder.description(desc);
         builder.executor(this);
 
         return builder.build();
     }
 
-    protected Optional<SpongeCommandBase> findMatch(String arg, CommandSource source, CommandContext context)
+    protected Optional<SpongeCommand> findMatch(String arg, CommandSource source, CommandContext context)
     {
         if (parent != null)
         {
@@ -107,7 +150,7 @@ public class SpongeCommand extends SpongeCommandBase
 
     protected boolean matchFor(String arg, CommandSource source, CommandContext context)
     {
-        if (!this.alias().equals(arg))
+        if (!this.main().equals(arg))
         {
             return false;
         }
@@ -149,9 +192,9 @@ public class SpongeCommand extends SpongeCommandBase
     public CommandResult execute(CommandSource source, CommandContext context) throws CommandException
     {
         // if context doesn't match this command's parameters, search for a sibling that does match
-        if (!this.matchFor(alias(), source, context))
+        if (!this.matchFor(main(), source, context))
         {
-            Optional<SpongeCommandBase> child = findMatch(alias(), source, context);
+            Optional<SpongeCommand> child = findMatch(main(), source, context);
             if (child.isPresent())
             {
                 return child.get().execute(source, context);
@@ -183,11 +226,8 @@ public class SpongeCommand extends SpongeCommandBase
     public String toString()
     {
         StringBuilder sb = new StringBuilder("/");
-        if (!isMain())
-        {
-            sb.append(parent.command()).append(" ");
-        }
-        sb.append(alias());
+        if (!isMain()) sb.append(command.parent()).append(" ");
+        sb.append(main());
         for (CommandParameter parameter : parameters)
         {
             if (!parameter.caller())
@@ -195,7 +235,7 @@ public class SpongeCommand extends SpongeCommandBase
                 sb.append(" ").append(parameter);
             }
         }
-        if (!permission.isEmpty()) sb.append(" - [").append(permission).append("]");
+        if (!command.perm().isEmpty()) sb.append(" - [").append(command.perm()).append("]");
         return sb.toString();
     }
 }

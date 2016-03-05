@@ -130,7 +130,7 @@ public final class CommandBus
                 if (method.isAnnotationPresent(Command.class))
                 {
                     count++;
-                    SpongeCommand command = new SpongeCommand(object, method);
+                    SpongeCommand command = new SpongeCommand(object, method, method.getAnnotation(Command.class));
                     registry.add(command);
                 }
             }

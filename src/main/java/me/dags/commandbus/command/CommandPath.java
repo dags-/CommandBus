@@ -37,6 +37,11 @@ public class CommandPath
         this.path = in.toLowerCase().split(" ");
     }
 
+    public String all()
+    {
+        return to(maxDepth());
+    }
+
     public String at(int depth)
     {
         return depth < path.length ? path[depth] : "";
@@ -44,7 +49,7 @@ public class CommandPath
 
     public String to(int depth)
     {
-        StringBuilder sb = new StringBuilder(path[0]);
+        StringBuilder sb = new StringBuilder(depth < 0 ? "" : path[0]);
         for (int i = 1; i <= depth && i < path.length; i++)
             sb.append(" ").append(path[i]);
         return sb.toString();
