@@ -104,6 +104,6 @@ public final class Registry
 
     private Collection<SpongeCommand> find(String path)
     {
-        return commands.stream().filter(c -> c.pathString().equals(path)).collect(Collectors.toList());
+        return commands.stream().filter(c -> c.command().equals(path)).collect(Collectors.toList());
     }
 }

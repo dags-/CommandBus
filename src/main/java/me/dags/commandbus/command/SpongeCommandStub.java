@@ -58,7 +58,7 @@ public class SpongeCommandStub extends SpongeCommand
         return path;
     }
 
-    public String pathString()
+    public String command()
     {
         return path() + " " + main();
     }
@@ -107,6 +107,6 @@ public class SpongeCommandStub extends SpongeCommand
     @Override
     public String toString()
     {
-        return "/" + (isMain() ? main() : pathString()) + " - Command stub";
+        return "/" + (isMain() ? main() : command()) + " - Command stub";
     }
 }

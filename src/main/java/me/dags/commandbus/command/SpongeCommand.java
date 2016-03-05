@@ -26,7 +26,6 @@ package me.dags.commandbus.command;
 
 import me.dags.commandbus.annotation.Command;
 import me.dags.commandbus.exception.ParameterAnnotationException;
-
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
@@ -56,6 +55,7 @@ public class SpongeCommand implements CommandExecutor
     private final Object owner;
     private final Method target;
     private final Command command;
+    private final CommandPath path;
     private final CommandParameter[] parameters;
     protected final Set<SpongeCommand> children = new LinkedHashSet<>();
 
@@ -67,6 +67,7 @@ public class SpongeCommand implements CommandExecutor
         this.owner = owner;
         this.target = target;
         this.command = target.getAnnotation(Command.class);
+        this.path = new CommandPath(command.parent());
         this.parameters = new CommandParameter[parameters.length];
         for (int i = 0; i < parameters.length; i++)
         {
@@ -84,6 +85,7 @@ public class SpongeCommand implements CommandExecutor
         owner = null;
         target = null;
         command = null;
+        path = null;
         parameters = null;
     }
 
@@ -101,10 +103,10 @@ public class SpongeCommand implements CommandExecutor
 
     public CommandPath path()
     {
-        return new CommandPath(command.parent());
+        return path;
     }
 
-    public String pathString()
+    public String command()
     {
         return command.parent() + " " + main();
     }
@@ -189,6 +191,7 @@ public class SpongeCommand implements CommandExecutor
     @Override
     public CommandResult execute(CommandSource source, CommandContext context) throws CommandException
     {
+        // if context doesn't match this command's parameters, search for a sibling that does match
         if (!this.matchFor(main(), source, context))
         {
             Optional<SpongeCommand> child = findMatch(main(), source, context);
@@ -199,25 +202,14 @@ public class SpongeCommand implements CommandExecutor
             return CommandResult.empty();
         }
 
-        int i = 0;
+        // Context is valid for this command, so build a params array and invoke the target method
+        // TODO flags?
+
         Object[] params = new Object[parameters.length];
-        for (CommandParameter p : parameters)
+        for (int i = 0; i < params.length; i++)
         {
-            if (p.caller())
-            {
-                params[i++] = source;
-            }
-            else
-            {
-                if (p.collect())
-                {
-                    params[i++] = context.getAll(p.key());
-                }
-                else
-                {
-                    params[i++] = context.getOne(p.key()).get();
-                }
-            }
+            CommandParameter p = parameters[i];
+            params[i] = p.caller() ? source : p.collect() ? context.getAll(p.key()) : context.getOne(p.key()).get();
         }
 
         try
