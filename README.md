@@ -5,17 +5,17 @@ Another command annotation processing thing
 ```java
 public class ExampleCommands {
 
-    @Command(aliases = "pm", perm = "ExamplePlugin.pm.single", desc = "Send a private message to someone")
-    public void message(@Caller CommandSource from, @One("to") Player to, @Join("message") String message) {
+    @Command(aliases = "pm", perm = "exampleplugin.pm.single", desc = "Send a private message to someone")
+    public void message(@Caller CommandSource from, @One Player to, @Join String message) {
         from.sendMessage(Text.of("You -> " + to.getName() + ": " + message));
         to.sendMessage(Text.of("" + from.getName() + " -> You: " + message));
     }
 
-    @Command(aliases = "pma", perm = "ExamplePlugin.pm.all", desc = "Send a private message to all those whose name starts with <to>")
-    public void messageAll(@Caller CommandSource from, @All("to") Collection<Player> to, @Join("message") String message) {
+    @Command(aliases = "pma", perm = "exampleplugin.pm.all", desc = "Send a private message to all those whose name starts with <to>")
+    public void messageAll(@Caller CommandSource from, @All Collection<Player> to, @Join String message) {
         from.sendMessage(Text.of("You -> ToAll: " + message));
         to.stream().filter(p -> p != from).forEach(p -> p.sendMessage(Text.of("" + from.getName() + " -> You: " + message)));
-    }    
+    }
 }
 ```
 
