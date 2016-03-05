@@ -63,6 +63,9 @@ public final class Registry
 
         commandBus.info("Registering {} commands", mainCommands.size());
         mainCommands.values().forEach(c -> Sponge.getCommandManager().register(plugin, c.spec(), c.aliases()));
+
+        commandBus.info("Clearing registry of {} commands", commands.size());
+        commands.clear();
     }
 
     private void findParent(SpongeCommand command, Map<String, SpongeCommand> mainCommands)
