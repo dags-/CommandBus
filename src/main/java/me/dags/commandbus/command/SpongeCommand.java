@@ -175,6 +175,7 @@ public class SpongeCommand extends SpongeCommandBase
         }
         catch (InvocationTargetException | IllegalAccessException e)
         {
+            e.printStackTrace();
             return CommandResult.empty();
         }
     }
