@@ -25,11 +25,12 @@
 package me.dags.commandbus.command;
 
 import com.flowpowered.math.vector.Vector3d;
-import me.dags.commandbus.annotation.Caller;
 import me.dags.commandbus.annotation.All;
-import me.dags.commandbus.annotation.One;
+import me.dags.commandbus.annotation.Caller;
 import me.dags.commandbus.annotation.Join;
+import me.dags.commandbus.annotation.One;
 import me.dags.commandbus.exception.ParameterAnnotationException;
+import org.spongepowered.api.CatalogType;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.entity.living.player.Player;
@@ -40,7 +41,10 @@ import org.spongepowered.api.world.World;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 
 /**
@@ -178,15 +182,21 @@ public class CommandParameter
 
     public static boolean validParameterType(Class<?> type)
     {
-        return types.containsKey(type);
+        return types.containsKey(type) || CatalogType.class.isAssignableFrom(type);
     }
 
+    @SuppressWarnings("unchecked")
     public static CommandElement of(Class<?> type, String key)
     {
         Function<String, CommandElement> f = types.get(type);
         if (f != null)
         {
             return GenericArguments.optional(f.apply(key));
+        }
+        if (CatalogType.class.isAssignableFrom(type))
+        {
+            CommandElement e = GenericArguments.catalogedElement(Text.of(key), (Class<? extends CatalogType>) type);
+            return GenericArguments.optional(e);
         }
         return GenericArguments.none();
     }
