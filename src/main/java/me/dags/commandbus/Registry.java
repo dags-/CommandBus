@@ -64,26 +64,28 @@ public final class Registry
         commandBus.info("Assigning child commands");
         commands.forEach(c -> findParent(c, mainCommands));
 
-        commandBus.info("Registering {} commands", mainCommands.size());
-        mainCommands.values().forEach(c -> Sponge.getCommandManager().register(plugin, c.spec(), c.aliases()));
+        commandBus.info("Registering {} commands", mainCommands.values().stream().filter(SpongeCommandBase::isMain).count());
+        mainCommands.values().stream()
+                .filter(SpongeCommandBase::isMain)
+                .forEach(c -> Sponge.getCommandManager().register(plugin, c.spec(), c.aliases()));
 
         commandBus.info("Clearing registry of {} commands", commands.size());
         commands.clear();
     }
 
-    private void findParent(SpongeCommandBase command, Map<String, SpongeCommandBase> rootCommands)
+    private void findParent(SpongeCommandBase command, Map<String, SpongeCommandBase> main)
     {
         if (command.isMain())
         {
-            rootCommands.put(command.alias(), command);
+            main.put(command.command(), command);
             return;
         }
 
         CommandPath path = command.path();
         String parentPath = path.all();
-        if (rootCommands.containsKey(parentPath))
+        if (main.containsKey(parentPath))
         {
-            rootCommands.get(parentPath).addChild(command);
+            main.get(parentPath).addChild(command);
             return;
         }
 
@@ -98,6 +100,12 @@ public final class Registry
 
         String stubPath = path.to(path.maxDepth() - 1);
         String stubAlias = path.at(path.maxDepth());
-        findParent(new SpongeCommandBase(stubPath, stubAlias).addChild(command), rootCommands);
+
+        commandBus.info("Creating command stub for path {} {}", stubPath, stubAlias);
+
+        SpongeCommandBase stub = new SpongeCommandBase(stubPath, stubAlias).addChild(command);
+        main.put(stub.command(), stub);
+
+        findParent(stub, main);
     }
 }
