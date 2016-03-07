@@ -101,11 +101,10 @@ public final class Registry
         String stubPath = path.to(path.maxDepth() - 1);
         String stubAlias = path.at(path.maxDepth());
 
-        commandBus.info("Creating command stub for path {} {}", stubPath, stubAlias);
-
         SpongeCommandBase stub = new SpongeCommandBase(stubPath, stubAlias).addChild(command);
         main.put(stub.command(), stub);
 
+        commandBus.info("Created stub for path {}", stub.command());
         findParent(stub, main);
     }
 }
