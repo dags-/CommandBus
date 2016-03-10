@@ -28,6 +28,9 @@ package me.dags.commandbus.command;
  * @author dags <dags@dags.me>
  */
 
+/**
+ * Used internally by CommandBus to describe the 'path' of a command.
+ */
 public class CommandPath
 {
     private final String[] path;
