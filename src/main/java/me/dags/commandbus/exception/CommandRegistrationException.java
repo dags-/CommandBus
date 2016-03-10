@@ -28,6 +28,10 @@ package me.dags.commandbus.exception;
  * @author dags <dags@dags.me>
  */
 
+/**
+ * Thrown if an object is passed to the CommandBus submit(object) method that is
+ * not a Sponge plugin.
+ */
 public class CommandRegistrationException extends RuntimeException
 {
     public CommandRegistrationException(String warn, Object... args)
