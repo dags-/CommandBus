@@ -51,6 +51,9 @@ import java.util.function.Function;
  * @author dags <dags@dags.me>
  */
 
+/**
+ * Used internally by CommandBus to hold information about a Method Parameter.
+ */
 public class CommandParameter
 {
     private static final Map<Class<?>, Function<String, CommandElement>> types = init();
@@ -164,11 +167,8 @@ public class CommandParameter
             Join remaining = parameter.getAnnotation(Join.class);
             return new CommandParameter(remaining.value(), id, parameter.getType(), false, false, true);
         }
-        else
-        {
-            String warn = "Command Method %s in %s contains an un-annotated parameter %s";
-            throw new ParameterAnnotationException(warn, method.getName(), owner.getClass(), parameter);
-        }
+        CommandParameter.typeCheck(parameter.getType(), parameter, method, owner);
+        return new CommandParameter("", id, parameter.getType(), false, false, false);
     }
 
     private static void typeCheck(Class<?> type, Parameter source, Method method, Object owner)
