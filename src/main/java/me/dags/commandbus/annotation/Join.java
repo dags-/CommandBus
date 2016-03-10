@@ -41,5 +41,10 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Join
 {
+    /**
+     * Optionally set the name of this variable (used in generated command info).
+     *
+     * @return The name of the Parameter this annotation is annotating.
+     */
     String value() default "";
 }
