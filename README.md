@@ -6,7 +6,7 @@ Another command annotation processing thing
 public class ExampleCommands {
 
     @Command(aliases = "pm", perm = "exampleplugin.pm.single", desc = "Send a private message to someone")
-    public void message(@Caller CommandSource from, @One Player to, @Join String message) {
+    public void message(@Caller CommandSource from, Player to, @Join String message) {
         from.sendMessage(Text.of("You -> " + to.getName() + ": " + message));
         to.sendMessage(Text.of("" + from.getName() + " -> You: " + message));
     }
@@ -25,10 +25,7 @@ public class ExampleCommands {
 public class ExamplePlugin {
 
     public void ontInit() {
-        CommandBus bus = new CommandBus();
-        bus.register(ExampleCommands.class);
-        bus.register(new SomeOtherCommand());
-        bus.submit(this);
+        CommandBus.newInstance().register(ExampleCommands.class).register(new SomeOtherCommand()).submit(this);
     }
 }
 ```
