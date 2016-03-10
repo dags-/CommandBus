@@ -24,50 +24,180 @@
 
 package me.dags.commandbus.command;
 
+import me.dags.commandbus.annotation.Command;
+import me.dags.commandbus.exception.ParameterAnnotationException;
+import org.spongepowered.api.command.CommandException;
+import org.spongepowered.api.command.CommandResult;
+import org.spongepowered.api.command.CommandSource;
+import org.spongepowered.api.command.args.CommandContext;
+import org.spongepowered.api.command.args.CommandElement;
+import org.spongepowered.api.command.args.GenericArguments;
+import org.spongepowered.api.command.spec.CommandSpec;
+import org.spongepowered.api.text.Text;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 /**
  * @author dags <dags@dags.me>
  */
 
 /**
- * Used internally by CommandBus to describe the 'path' of a command.
+ * Used internally by CommandBus to store information about a given @Command.
  */
-public class CommandPath
+public class SpongeCommand extends SpongeCommandBase
 {
-    private final String[] path;
+    private final Object owner;
+    private final Method target;
+    private final String permission;
+    private final String description;
+    private final CommandParameter[] parameters;
 
-    public CommandPath(String in)
+    public SpongeCommand(Object owner, Method target, Command command)
     {
-        this.path = in.toLowerCase().split(" ");
+        super(command.parent(), command.aliases());
+
+        Parameter[] parameters = target.getParameters();
+
+        this.owner = owner;
+        this.target = target;
+        this.permission = command.perm();
+        this.description = command.desc();
+        this.parameters = new CommandParameter[parameters.length];
+        for (int i = 0; i < parameters.length; i++)
+        {
+            this.parameters[i] = CommandParameter.from(owner, target, parameters[i], i);
+            if (this.parameters[i].join() && i + 1 < parameters.length)
+            {
+                String warn = "The @Retaining annotation should only by used on the last Paramter in a Method: %s in %s";
+                throw new ParameterAnnotationException(warn, target.getName(), owner);
+            }
+        }
     }
 
-    public String all()
+    public CommandSpec spec()
     {
-        return to(maxDepth());
+        CommandSpec.Builder builder = CommandSpec.builder();
+
+        Text desc = Text.of(description.isEmpty() ? this.toString() : description);
+        Text.Builder extendedInfo = Text.builder();
+        appendExtendedInfo(extendedInfo);
+
+        children.forEach(c -> builder.child(c.spec(), c.aliases()));
+
+        if (!permission.isEmpty()) builder.permission(permission);
+        builder.extendedDescription(extendedInfo.build());
+        builder.arguments(sequence());
+        builder.description(desc);
+        builder.executor(this);
+
+        return builder.build();
     }
 
-    public String at(int depth)
+    protected Optional<SpongeCommandBase> findMatch(String arg, CommandSource source, CommandContext context)
     {
-        return depth < path.length ? path[depth] : "";
+        if (parent != null)
+        {
+            return parent.children.stream().filter(c -> c.matchFor(arg, source, context)).findFirst();
+        }
+        return Optional.empty();
     }
 
-    public String to(int depth)
+    protected boolean matchFor(String arg, CommandSource source, CommandContext context)
     {
-        StringBuilder sb = new StringBuilder(depth < 0 ? "" : path[0]);
-        for (int i = 1; i <= depth && i < path.length; i++)
-            sb.append(" ").append(path[i]);
+        if (!this.alias().equals(arg))
+        {
+            return false;
+        }
+        for (CommandParameter p : parameters)
+        {
+            if (p.caller() && p.type().isInstance(source))
+            {
+                continue;
+            }
+            if (context.hasAny(p.key()))
+            {
+                continue;
+            }
+            return false;
+        }
+        return true;
+    }
+
+    private CommandElement sequence()
+    {
+        List<CommandElement> elements = Stream.of(parameters)
+                .filter(p -> !p.caller())
+                .map(CommandParameter::element)
+                .collect(Collectors.toList());
+
+        return GenericArguments.seq(elements.toArray(new CommandElement[elements.size()]));
+    }
+
+    protected void appendExtendedInfo(Text.Builder builder)
+    {
+        builder.append(Text.of(this));
+        children.forEach(c -> {
+            builder.append(Text.NEW_LINE);
+            c.appendExtendedInfo(builder);
+        });
+    }
+
+    @Override
+    public CommandResult execute(CommandSource source, CommandContext context) throws CommandException
+    {
+        // if context doesn't match this command's parameters, search for a sibling that does match
+        if (!this.matchFor(alias(), source, context))
+        {
+            Optional<SpongeCommandBase> child = findMatch(alias(), source, context);
+            if (child.isPresent())
+            {
+                return child.get().execute(source, context);
+            }
+            return CommandResult.empty();
+        }
+
+        Object[] params = new Object[parameters.length];
+        for (int i = 0; i < params.length; i++)
+        {
+            CommandParameter p = parameters[i];
+            params[i] = p.caller() ? source : p.collect() ? context.getAll(p.key()) : context.getOne(p.key()).get();
+        }
+
+        try
+        {
+            target.invoke(owner, params);
+            return CommandResult.success();
+        }
+        catch (InvocationTargetException | IllegalAccessException e)
+        {
+            e.printStackTrace();
+            return CommandResult.empty();
+        }
+    }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder("/");
+        if (!isMain())
+        {
+            sb.append(parent.command()).append(" ");
+        }
+        sb.append(alias());
+        for (CommandParameter parameter : parameters)
+        {
+            if (!parameter.caller())
+            {
+                sb.append(" ").append(parameter);
+            }
+        }
+        if (!permission.isEmpty()) sb.append(" - [").append(permission).append("]");
         return sb.toString();
-    }
-
-    public String from(int depth)
-    {
-        StringBuilder sb = new StringBuilder(path[depth]);
-        for (int i = depth; i < maxDepth() && i < path.length; i++)
-            sb.append(" ").append(path[i]);
-        return sb.toString();
-    }
-
-    public int maxDepth()
-    {
-        return path.length - 1;
     }
 }
