@@ -52,39 +52,25 @@ public final class CommandBus
     private final boolean logging;
     private final Logger logger;
 
-    /**
-     * Create a new default CommandBus instance.
-     */
-    public CommandBus()
+    private CommandBus()
     {
         this(true);
     }
 
-    /**
-     * Create a new CommandBus instance with logging optionally enabled/disabled.
-     *
-     * @param logging Sets CommandBus logging enabled/disabled.
-     */
-    public CommandBus(boolean logging)
+    private CommandBus(boolean logging)
     {
         this.logging = logging;
         this.logger = LoggerFactory.getLogger(CommandBus.class);
     }
 
-    /**
-     * Create a new CommandBus instance that will log via the given Logger
-     * rather than the default CommandBus logger.
-     *
-     * @param logger The alternative Logger for CommandBus to use.
-     */
-    public CommandBus(Logger logger)
+    private CommandBus(Logger logger)
     {
         this.logging = true;
         this.logger = logger;
     }
 
     /**
-     * Register Commands for the given class.
+     * Register Commands for the given class(es).
      * CommandBus will attempt to create a new instance and then register
      * it's Methods annotated with @Command. The class must have an accessible
      * default constructor.
@@ -92,7 +78,16 @@ public final class CommandBus
      * @param clazz The class to register.
      * @return The current CommandBus instance (for chaining).
      */
-    public CommandBus register(Class<?> clazz)
+    public CommandBus register(Class<?>... classes)
+    {
+        for (Class<?> c : classes)
+        {
+            register(c);
+        }
+        return this;
+    }
+
+    private void register(Class<?> clazz)
     {
         info("Attempting to instantiate class {}", clazz);
         try
@@ -105,11 +100,10 @@ public final class CommandBus
             error("Failed to instantiate class {}, make sure there is an accessible default constructor", clazz);
             e.printStackTrace();
         }
-        return this;
     }
 
     /**
-     * Register Commands for the given object.
+     * Register Commands for the given object(s).
      * CommandBus will search for Methods annotated with @Command
      * and generate a Command from the provided infomation and Method
      * Parameters.
@@ -118,7 +112,16 @@ public final class CommandBus
      * @param object The object to register.
      * @return The current CommandBus instance (for chaining).
      */
-    public CommandBus register(Object object)
+    public CommandBus register(Object... objects)
+    {
+        for (Object o : objects)
+        {
+            register(o);
+        }
+        return this;
+    }
+
+    private void register(Object object)
     {
         Class<?> c = object.getClass();
         info("Scanning {} for @Command methods", c);
@@ -138,7 +141,6 @@ public final class CommandBus
         }
         while (!c.equals(Object.class));
         info("Discovered {} command methods in class {}", count, object.getClass());
-        return this;
     }
 
     /**
@@ -182,5 +184,40 @@ public final class CommandBus
         {
             logger.error(message, args);
         }
+    }
+
+    /**
+     * Get a new default CommandBus instance.
+     *
+     * @return The newly created CommandBus instance using the default logger.
+     */
+    public static CommandBus newInstance()
+    {
+        return new CommandBus();
+    }
+
+    /**
+     * Get a new CommandBus instance using the provided logger.
+     *
+     * @param logger The logger this new CommandBus should use
+     * @return The newly created CommandBus using the provided logger.
+     */
+    public static CommandBus newInstance(Logger logger)
+    {
+        if (logger == null)
+        {
+            return newInstance();
+        }
+        return new CommandBus(logger);
+    }
+
+    /**
+     * Get a new CommandBus instance with logging disabled.
+     *
+     * @return The newly created CommandBus with logging disabled.
+     */
+    public static CommandBus newSilentInstance()
+    {
+        return new CommandBus(false);
     }
 }
