@@ -24,200 +24,94 @@
 
 package me.dags.commandbus;
 
-import me.dags.commandbus.annotation.Command;
+import me.dags.commandbus.command.CommandPath;
 import me.dags.commandbus.command.SpongeCommand;
-import me.dags.commandbus.exception.CommandRegistrationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import me.dags.commandbus.command.SpongeCommandBase;
 import org.spongepowered.api.Sponge;
-import org.spongepowered.api.plugin.PluginContainer;
 
-import java.lang.reflect.Method;
-import java.util.Optional;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * @author dags <dags@dags.me>
  */
 
 /**
- * The CommandBus handles the processing of Objects/Classes utilising
- * the @Command annotation.
- * Commands should first be registered via the register() methods, and finally,
- * submitted to Sponge via the submit() method - all subcommands of a given command
- * should be registered through the same CommandBus instance, before being submitted.
+ * Used internally by CommandBus to store store commands before registering them
+ * with Sponge.
  */
-public final class CommandBus
+public final class Registry
 {
-    private final Registry registry = new Registry(this);
-    private final boolean logging;
-    private final Logger logger;
+    private final Set<SpongeCommandBase> commands = new HashSet<>();
+    private final CommandBus commandBus;
 
-    private CommandBus()
+    protected Registry(CommandBus commandBus)
     {
-        this(true);
+        this.commandBus = commandBus;
     }
 
-    private CommandBus(boolean logging)
+    protected void add(SpongeCommand command)
     {
-        this.logging = logging;
-        this.logger = LoggerFactory.getLogger(CommandBus.class);
+        commands.add(command);
     }
 
-    private CommandBus(Logger logger)
+    protected void submit(Object plugin)
     {
-        this.logging = true;
-        this.logger = logger;
+        commandBus.info("Registering {} command nodes", commands.size());
+        Map<String, SpongeCommandBase> mainCommands = new HashMap<>();
+        commands.stream().filter(SpongeCommandBase::isMain)
+                .forEach(c -> mainCommands.put(c.alias(), c));
+
+        commandBus.info("Assigning child nodes to parents");
+        commands.forEach(c -> findParent(c, mainCommands));
+
+        long count = mainCommands.values().stream().filter(SpongeCommandBase::isMain).count();
+        commandBus.info("Registering {} main commands", count);
+        mainCommands.values().stream()
+                .filter(SpongeCommandBase::isMain)
+                .forEach(c -> {
+                    commandBus.info("Registering command {}", c.alias());
+                    Sponge.getCommandManager().register(plugin, c.spec(), c.aliases());
+                });
+
+        commandBus.info("Clearing commands registry");
+        commands.clear();
     }
 
-    /**
-     * Register Commands for the given class(es).
-     * CommandBus will attempt to create a new instance and then register
-     * it's Methods annotated with @Command. The class must have an accessible
-     * default constructor.
-     *
-     * @param clazz The class to register.
-     * @return The current CommandBus instance (for chaining).
-     */
-    public CommandBus register(Class<?>... classes)
+    private void findParent(SpongeCommandBase command, Map<String, SpongeCommandBase> main)
     {
-        for (Class<?> c : classes)
+        if (command.isMain())
         {
-            register(c);
+            main.put(command.command(), command);
+            return;
         }
-        return this;
-    }
 
-    private void register(Class<?> clazz)
-    {
-        info("Attempting to instantiate class {}", clazz);
-        try
+        CommandPath path = command.path();
+        String parentPath = path.all();
+        if (main.containsKey(parentPath))
         {
-            Object object = clazz.newInstance();
-            register(object);
+            main.get(parentPath).addChild(command);
+            return;
         }
-        catch (InstantiationException | IllegalAccessException e)
-        {
-            error("Failed to instantiate class {}, make sure there is an accessible default constructor", clazz);
-            e.printStackTrace();
-        }
-    }
 
-    /**
-     * Register Commands for the given object(s).
-     * CommandBus will search for Methods annotated with @Command
-     * and generate a Command from the provided infomation and Method
-     * Parameters.
-     * This method also searches through an object's super class heirarchy.
-     *
-     * @param object The object to register.
-     * @return The current CommandBus instance (for chaining).
-     */
-    public CommandBus register(Object... objects)
-    {
-        for (Object o : objects)
+        for (SpongeCommandBase c : commands)
         {
-            register(o);
-        }
-        return this;
-    }
-
-    private void register(Object object)
-    {
-        Class<?> c = object.getClass();
-        info("Scanning {} for @Command methods", c);
-        int count = 0;
-        do
-        {
-            for (Method method : object.getClass().getDeclaredMethods())
+            if (c.command().equals(parentPath))
             {
-                if (method.isAnnotationPresent(Command.class))
-                {
-                    count++;
-                    SpongeCommand command = new SpongeCommand(object, method, method.getAnnotation(Command.class));
-                    registry.add(command);
-                }
+                c.addChild(command);
+                return;
             }
-            c = c.getSuperclass();
         }
-        while (!c.equals(Object.class));
-        info("Discovered {} command methods in class {}", count, object.getClass());
-    }
 
-    /**
-     * Submits registered Commands to Sponge.
-     * This method should be called after Command classes/objects have been
-     * registered via the register() methods.
-     *
-     * @param plugin The Plugin associated with the Commands to be registered.
-     */
-    public void submit(Object plugin)
-    {
-        Optional<PluginContainer> container = Sponge.getPluginManager().fromInstance(plugin);
-        if (!container.isPresent())
-        {
-            String warn = "Attempted to register commands for %s, but it is not a valid Sponge Plugin!";
-            throw new CommandRegistrationException(warn, plugin.getClass());
-        }
-        info("Registering commands for {}", container.get().getName());
-        registry.submit(plugin);
-    }
+        String stubPath = path.to(path.maxDepth() - 1);
+        String stubAlias = path.at(path.maxDepth());
 
-    protected void info(String message, Object... args)
-    {
-        if (logging)
-        {
-            logger.info(message, args);
-        }
-    }
+        SpongeCommandBase stub = new SpongeCommandBase(stubPath, stubAlias).addChild(command);
+        main.put(stub.command(), stub);
 
-    protected void warn(String message, Object... args)
-    {
-        if (logging)
-        {
-            logger.warn(message, args);
-        }
-    }
-
-    protected void error(String message, Object... args)
-    {
-        if (logging)
-        {
-            logger.error(message, args);
-        }
-    }
-
-    /**
-     * Get a new default CommandBus instance.
-     *
-     * @return The newly created CommandBus instance using the default logger.
-     */
-    public static CommandBus newInstance()
-    {
-        return new CommandBus();
-    }
-
-    /**
-     * Get a new CommandBus instance using the provided logger.
-     *
-     * @param logger The logger this new CommandBus should use
-     * @return The newly created CommandBus using the provided logger.
-     */
-    public static CommandBus newInstance(Logger logger)
-    {
-        if (logger == null)
-        {
-            return newInstance();
-        }
-        return new CommandBus(logger);
-    }
-
-    /**
-     * Get a new CommandBus instance with logging disabled.
-     *
-     * @return The newly created CommandBus with logging disabled.
-     */
-    public static CommandBus newSilentInstance()
-    {
-        return new CommandBus(false);
+        commandBus.info("Created stub for command {}", stub.command());
+        findParent(stub, main);
     }
 }
