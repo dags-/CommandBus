@@ -1,6 +1,9 @@
 # CommandBus
 Another command annotation processing thing
 
+[![Build Status](https://travis-ci.org/dags-/CommandBus.svg?branch=master)](https://travis-ci.org/dags-/CommandBus)
+
+
 #### example command code
 ```java
 public class ExampleCommands {
