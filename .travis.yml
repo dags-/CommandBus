@@ -9,4 +9,4 @@ deploy:
   file: "target/CommandBus-2.0.0-SNAPSHOT.jar"
   skip_cleanup: true
   on:
-    tags: false
+    tags: true
