@@ -24,112 +24,50 @@
 
 package me.dags.commandbus.command;
 
-import org.spongepowered.api.command.CommandException;
-import org.spongepowered.api.command.CommandResult;
-import org.spongepowered.api.command.CommandSource;
-import org.spongepowered.api.command.args.CommandContext;
-import org.spongepowered.api.command.spec.CommandExecutor;
-import org.spongepowered.api.command.spec.CommandSpec;
-import org.spongepowered.api.text.Text;
-
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 /**
  * @author dags <dags@dags.me>
  */
 
 /**
- * Used internally by CommandBus to store information about a given @Command or
- * an automatically generated command stub.
+ * Used internally by CommandBus to describe the 'path' of a command.
  */
-public class SpongeCommandBase implements CommandExecutor
+public class CommandPath
 {
-    private final String[] aliases;
-    private final String parentPath;
-    private final CommandPath path;
-    protected final Set<SpongeCommandBase> children = new LinkedHashSet<>();
+    private final String[] path;
 
-    protected SpongeCommandBase parent = null;
-
-    public SpongeCommandBase(String parent, String... alias)
+    public CommandPath(String in)
     {
-        this.aliases = alias;
-        this.parentPath = parent;
-        this.path = new CommandPath(parent);
+        this.path = in.toLowerCase().split(" ");
     }
 
-    public boolean isMain()
+    public String all()
     {
-        return parentPath.isEmpty();
+        return to(maxDepth());
     }
 
-    public CommandPath path()
+    public String at(int depth)
     {
-        return path;
+        return depth < path.length ? path[depth] : "";
     }
 
-    public String command()
+    public String to(int depth)
     {
-        return isMain() ? alias() : parentPath + " " + alias();
+        StringBuilder sb = new StringBuilder(depth < 0 ? "" : path[0]);
+        for (int i = 1; i <= depth && i < path.length; i++)
+            sb.append(" ").append(path[i]);
+        return sb.toString();
     }
 
-    public String alias()
+    public String from(int depth)
     {
-        return aliases[0];
+        StringBuilder sb = new StringBuilder(path[depth]);
+        for (int i = depth; i < maxDepth() && i < path.length; i++)
+            sb.append(" ").append(path[i]);
+        return sb.toString();
     }
 
-    public String[] aliases()
+    public int maxDepth()
     {
-        return aliases;
-    }
-
-    public SpongeCommandBase addChild(SpongeCommandBase child)
-    {
-        children.add(child);
-        child.parent = this;
-        return this;
-    }
-
-    public CommandSpec spec()
-    {
-        CommandSpec.Builder builder = CommandSpec.builder();
-
-        Text.Builder extendedInfo = Text.builder();
-        appendExtendedInfo(extendedInfo);
-        Text description = Text.of(this.toString());
-
-        children.forEach(c -> builder.child(c.spec(), c.aliases()));
-        builder.extendedDescription(extendedInfo.build());
-        builder.description(description);
-        builder.executor(this);
-
-        return builder.build();
-    }
-
-    protected void appendExtendedInfo(Text.Builder builder)
-    {
-        builder.append(Text.of(this));
-        children.forEach(c -> {
-            builder.append(Text.NEW_LINE);
-            c.appendExtendedInfo(builder);
-        });
-    }
-
-    protected boolean matchFor(String arg, CommandSource source, CommandContext context)
-    {
-        return false;
-    }
-
-    @Override
-    public CommandResult execute(CommandSource source, CommandContext context) throws CommandException
-    {
-        return CommandResult.empty();
-    }
-
-    @Override
-    public String toString()
-    {
-        return "/" + (isMain() ? alias() : command()) + " - Command stub";
+        return path.length - 1;
     }
 }
