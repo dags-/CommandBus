@@ -6,7 +6,7 @@ script:
 deploy:
   provider: releases
   api_key: '$GITHUB_API_KEY'
-  file: "dist/CommandBus-2.0.0-SNAPSHOT.jar"
+  file: "CommandBus-2.0.0-SNAPSHOT.jar"
   skip_cleanup: true
   on:
     tags: false
