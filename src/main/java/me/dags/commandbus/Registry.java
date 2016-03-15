@@ -55,21 +55,23 @@ public final class Registry
 
     protected void submit(Object plugin)
     {
-        commandBus.info("Building command trees");
+        commandBus.info("Registering {} commands...", commands.size());
 
         Map<String, SpongeCommandBase> mainCommands = new HashMap<>();
-        commandBus.info("Finding main commands");
+        // Find 'main' (root) commands
         commands.stream().filter(SpongeCommandBase::isMain).forEach(c -> mainCommands.put(c.alias(), c));
 
-        commandBus.info("Assigning child commands");
+        // Assign child (sub) commands to parents. Create 'stub' if direct parent does not exist
         commands.forEach(c -> findParent(c, mainCommands));
 
+        // Register 'main' commands with Sponge (children are registered by association)
         commandBus.info("Registering {} commands", mainCommands.values().stream().filter(SpongeCommandBase::isMain).count());
         mainCommands.values().stream()
                 .filter(SpongeCommandBase::isMain)
                 .forEach(c -> Sponge.getCommandManager().register(plugin, c.spec(), c.aliases()));
 
-        commandBus.info("Clearing registry of {} commands", commands.size());
+        // Clear registry
+        commandBus.info("Clearing CommandBus registry");
         commands.clear();
     }
 

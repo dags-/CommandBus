@@ -75,7 +75,7 @@ public final class CommandBus
      * it's Methods annotated with @Command. The class must have an accessible
      * default constructor.
      *
-     * @param clazz The class to register.
+     * @param classes The class(es) to register.
      * @return The current CommandBus instance (for chaining).
      */
     public CommandBus register(Class<?>... classes)
@@ -109,7 +109,7 @@ public final class CommandBus
      * Parameters.
      * This method also searches through an object's super class heirarchy.
      *
-     * @param object The object to register.
+     * @param objects The object(s) to register.
      * @return The current CommandBus instance (for chaining).
      */
     public CommandBus register(Object... objects)
