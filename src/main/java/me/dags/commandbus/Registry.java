@@ -65,13 +65,12 @@ public final class Registry
         commands.forEach(c -> findParent(c, mainCommands));
 
         // Register 'main' commands with Sponge (children are registered by association)
-        commandBus.info("Registering {} commands", mainCommands.values().stream().filter(SpongeCommandBase::isMain).count());
+        commandBus.info("Registering {} main commands", mainCommands.values().stream().filter(SpongeCommandBase::isMain).count());
         mainCommands.values().stream()
                 .filter(SpongeCommandBase::isMain)
                 .forEach(c -> Sponge.getCommandManager().register(plugin, c.spec(), c.aliases()));
 
         // Clear registry
-        commandBus.info("Clearing CommandBus registry");
         commands.clear();
     }
 
@@ -105,8 +104,6 @@ public final class Registry
 
         SpongeCommandBase stub = new SpongeCommandBase(stubPath, stubAlias).addChild(command);
         main.put(stub.command(), stub);
-
-        commandBus.info("Created stub for path {}", stub.command());
         findParent(stub, main);
     }
 }

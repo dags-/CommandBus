@@ -89,7 +89,6 @@ public final class CommandBus
 
     private void register(Class<?> clazz)
     {
-        info("Attempting to instantiate class {}", clazz);
         try
         {
             Object object = clazz.newInstance();
@@ -124,7 +123,6 @@ public final class CommandBus
     private void register(Object object)
     {
         Class<?> c = object.getClass();
-        info("Scanning {} for @Command methods", c);
         int count = 0;
         do
         {
@@ -140,7 +138,7 @@ public final class CommandBus
             c = c.getSuperclass();
         }
         while (!c.equals(Object.class));
-        info("Discovered {} command methods in class {}", count, object.getClass());
+        info("Discovered {} command methods in class {}", count, object.getClass().getSimpleName());
     }
 
     /**

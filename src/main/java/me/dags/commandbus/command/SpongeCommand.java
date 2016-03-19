@@ -148,7 +148,6 @@ public class SpongeCommand extends SpongeCommandBase
     @Override
     public CommandResult execute(CommandSource source, CommandContext context) throws CommandException
     {
-        // if context doesn't match this command's parameters, search for a sibling that does match
         if (!this.matchFor(alias(), source, context))
         {
             Optional<SpongeCommandBase> child = findMatch(alias(), source, context);
@@ -158,8 +157,6 @@ public class SpongeCommand extends SpongeCommandBase
             }
             return CommandResult.empty();
         }
-
-        // Context is valid for this command, so build a params array and invoke the target method
 
         Object[] params = new Object[parameters.length];
         for (int i = 0; i < params.length; i++)
@@ -196,7 +193,6 @@ public class SpongeCommand extends SpongeCommandBase
                 sb.append(" ").append(parameter);
             }
         }
-        if (!permission.isEmpty()) sb.append(" - [").append(permission).append("]");
         return sb.toString();
     }
 }
