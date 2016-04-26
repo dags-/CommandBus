@@ -34,6 +34,7 @@ import org.spongepowered.api.CatalogType;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.entity.living.player.Player;
+import org.spongepowered.api.entity.living.player.User;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
@@ -70,6 +71,7 @@ public class CommandParameter
         map.put(Location.class, s -> GenericArguments.location(Text.of(s)));
         map.put(Player.class, s -> GenericArguments.player(Text.of(s)));
         map.put(String.class, s -> GenericArguments.string(Text.of(s)));
+        map.put(User.class, s -> GenericArguments.user(Text.of(s)));
         map.put(Vector3d.class, s -> GenericArguments.vector3d(Text.of(s)));
         map.put(World.class, s -> GenericArguments.world(Text.of(s)));
         return Collections.unmodifiableMap(map);
@@ -142,7 +144,7 @@ public class CommandParameter
         {
             return new CommandParameter("@", id, parameter.getType(), true, false, false);
         }
-        else if (parameter.isAnnotationPresent(All.class))
+        else if (parameter.isAnnotationPresent(All.class) || Collection.class.equals(parameter.getType()))
         {
             if (!Collection.class.equals(parameter.getType()))
             {
@@ -153,22 +155,27 @@ public class CommandParameter
             Class<?> type = (Class<?>) paramT.getActualTypeArguments()[0];
             CommandParameter.typeCheck(type, parameter, method, owner);
             All collect = parameter.getAnnotation(All.class);
-            return new CommandParameter(collect.value(), id, type, false, true, false);
-        }
-        else if (parameter.isAnnotationPresent(One.class))
-        {
-            CommandParameter.typeCheck(parameter.getType(), parameter, method, owner);
-            One one = parameter.getAnnotation(One.class);
-            return new CommandParameter(one.value(), id, parameter.getType(), false, false, false);
+            String name = collect != null ? collect.value() : "";
+            return new CommandParameter(name, id, type, false, true, false);
         }
         else if (parameter.isAnnotationPresent(Join.class))
         {
+            if (!String.class.equals(parameter.getType()))
+            {
+                String warn = "Parameter %s in Method %s in Class %s is annotated with @Join but is not of type %s";
+                throw new ParameterAnnotationException(warn, parameter, method.getName(), owner.getClass(), String.class);
+            }
             CommandParameter.typeCheck(parameter.getType(), parameter, method, owner);
             Join remaining = parameter.getAnnotation(Join.class);
             return new CommandParameter(remaining.value(), id, parameter.getType(), false, false, true);
         }
-        CommandParameter.typeCheck(parameter.getType(), parameter, method, owner);
-        return new CommandParameter("", id, parameter.getType(), false, false, false);
+        else
+        {
+            CommandParameter.typeCheck(parameter.getType(), parameter, method, owner);
+            One one = parameter.getAnnotation(One.class);
+            String name = one != null ? one.value() : "";
+            return new CommandParameter(name, id, parameter.getType(), false, false, false);
+        }
     }
 
     private static void typeCheck(Class<?> type, Parameter source, Method method, Object owner)
