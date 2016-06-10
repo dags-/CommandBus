@@ -39,8 +39,9 @@ import org.spongepowered.api.text.Text;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -72,7 +73,7 @@ public class SpongeCommand extends SpongeCommandBase implements CommandExecutor
             this.parameters[i] = CommandParameter.from(owner, target, parameters[i], i);
             if (this.parameters[i].join() && i + 1 < parameters.length)
             {
-                String warn = "The @Retaining annotation should only by used on the last Paramter in a Method: %s in %s";
+                String warn = "The @Retaining annotation should only by used on the last Parameter in a Method: %s in %s";
                 throw new ParameterAnnotationException(warn, target.getName(), owner);
             }
         }
@@ -83,48 +84,14 @@ public class SpongeCommand extends SpongeCommandBase implements CommandExecutor
         CommandSpec.Builder builder = CommandSpec.builder();
 
         Text desc = Text.of(description.isEmpty() ? this.toString() : description);
-        Text.Builder extendedInfo = Text.builder();
-        appendExtendedInfo(extendedInfo);
-
         children.forEach(c -> builder.child(c.spec(), c.aliases()));
-
         if (!permission.isEmpty()) builder.permission(permission);
-        builder.extendedDescription(extendedInfo.build());
+        builder.extendedDescription(extendedInfo());
         builder.arguments(sequence());
         builder.description(desc);
         builder.executor(this);
 
         return builder.build();
-    }
-
-    protected Optional<SpongeCommandBase> findMatch(String arg, CommandSource source, CommandContext context)
-    {
-        if (parent != null)
-        {
-            return parent.children.stream().filter(c -> c.matchFor(arg, source, context)).findFirst();
-        }
-        return Optional.empty();
-    }
-
-    protected boolean matchFor(String arg, CommandSource source, CommandContext context)
-    {
-        if (!this.alias().equals(arg))
-        {
-            return false;
-        }
-        for (CommandParameter p : parameters)
-        {
-            if (p.caller() && p.type().isInstance(source))
-            {
-                continue;
-            }
-            if (context.hasAny(p.key()))
-            {
-                continue;
-            }
-            return false;
-        }
-        return true;
     }
 
     private CommandElement sequence()
@@ -137,13 +104,21 @@ public class SpongeCommand extends SpongeCommandBase implements CommandExecutor
         return GenericArguments.seq(elements.toArray(new CommandElement[elements.size()]));
     }
 
-    protected void appendExtendedInfo(Text.Builder builder)
+    private Text extendedInfo()
     {
-        builder.append(Text.of(this));
-        children.forEach(c -> {
-            builder.append(Text.NEW_LINE);
-            c.appendExtendedInfo(builder);
-        });
+        Set<String> info = new LinkedHashSet<>();
+        extendedInfo(info);
+        Text.Builder builder = Text.builder();
+        builder.append(Text.of(this.toString()));
+        info.remove(this.toString());
+        info.forEach(s -> builder.append(Text.NEW_LINE).append(Text.of(s)));
+        return builder.build();
+    }
+
+    private void extendedInfo(Set<String> info)
+    {
+        info.add(this.toString());
+        children.forEach(c -> info.add(c.toString()));
     }
 
     @Override

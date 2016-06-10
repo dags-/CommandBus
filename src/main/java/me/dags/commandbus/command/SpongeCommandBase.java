@@ -24,8 +24,6 @@
 
 package me.dags.commandbus.command;
 
-import org.spongepowered.api.command.CommandSource;
-import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.text.Text;
 
@@ -41,9 +39,9 @@ public class SpongeCommandBase
     private final String[] aliases;
     private final String parentPath;
     private final CommandPath path;
-    protected final Set<SpongeCommandBase> children = new LinkedHashSet<>();
+    final Set<SpongeCommandBase> children = new LinkedHashSet<>();
 
-    protected SpongeCommandBase parent = null;
+    SpongeCommandBase parent = null;
 
     public SpongeCommandBase(String parent, String... alias)
     {
@@ -87,35 +85,33 @@ public class SpongeCommandBase
     public CommandSpec spec()
     {
         CommandSpec.Builder builder = CommandSpec.builder();
-
-        Text.Builder extendedInfo = Text.builder();
-        appendExtendedInfo(extendedInfo);
         Text description = Text.of(this.toString());
-
         children.forEach(c -> builder.child(c.spec(), c.aliases()));
-        builder.extendedDescription(extendedInfo.build());
+        builder.extendedDescription(extendedInfo());
         builder.description(description);
-
         return builder.build();
     }
 
-    protected void appendExtendedInfo(Text.Builder builder)
+    private Text extendedInfo()
     {
-        builder.append(Text.of(this));
-        children.forEach(c -> {
-            builder.append(Text.NEW_LINE);
-            c.appendExtendedInfo(builder);
-        });
+        Set<String> info = new LinkedHashSet<>();
+        extendedInfo(info);
+        Text.Builder builder = Text.builder();
+        builder.append(Text.of(this.toString()));
+        info.remove(this.toString());
+        info.forEach(s -> builder.append(Text.NEW_LINE).append(Text.of(s)));
+        return builder.build();
     }
 
-    protected boolean matchFor(String arg, CommandSource source, CommandContext context)
+    private void extendedInfo(Set<String> info)
     {
-        return false;
+        info.add(this.toString());
+        children.forEach(c -> info.add(c.toString()));
     }
 
     @Override
     public String toString()
     {
-        return "/" + (isMain() ? alias() : command()) + " - Command stub";
+        return "/" + (isMain() ? alias() : command());
     }
 }
