@@ -24,11 +24,8 @@
 
 package me.dags.commandbus.command;
 
-import org.spongepowered.api.command.CommandException;
-import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
-import org.spongepowered.api.command.spec.CommandExecutor;
 import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.text.Text;
 
@@ -39,7 +36,7 @@ import java.util.Set;
  * @author dags <dags@dags.me>
  */
 
-public class SpongeCommandBase implements CommandExecutor
+public class SpongeCommandBase
 {
     private final String[] aliases;
     private final String parentPath;
@@ -98,7 +95,6 @@ public class SpongeCommandBase implements CommandExecutor
         children.forEach(c -> builder.child(c.spec(), c.aliases()));
         builder.extendedDescription(extendedInfo.build());
         builder.description(description);
-        builder.executor(this);
 
         return builder.build();
     }
@@ -115,12 +111,6 @@ public class SpongeCommandBase implements CommandExecutor
     protected boolean matchFor(String arg, CommandSource source, CommandContext context)
     {
         return false;
-    }
-
-    @Override
-    public CommandResult execute(CommandSource source, CommandContext context) throws CommandException
-    {
-        return CommandResult.empty();
     }
 
     @Override

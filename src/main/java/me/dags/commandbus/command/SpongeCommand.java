@@ -32,6 +32,7 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.GenericArguments;
+import org.spongepowered.api.command.spec.CommandExecutor;
 import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.text.Text;
 
@@ -47,7 +48,7 @@ import java.util.stream.Stream;
  * @author dags <dags@dags.me>
  */
 
-public class SpongeCommand extends SpongeCommandBase
+public class SpongeCommand extends SpongeCommandBase implements CommandExecutor
 {
     private final Object owner;
     private final Method target;
@@ -148,16 +149,6 @@ public class SpongeCommand extends SpongeCommandBase
     @Override
     public CommandResult execute(CommandSource source, CommandContext context) throws CommandException
     {
-        if (!this.matchFor(alias(), source, context))
-        {
-            Optional<SpongeCommandBase> child = findMatch(alias(), source, context);
-            if (child.isPresent())
-            {
-                return child.get().execute(source, context);
-            }
-            return CommandResult.empty();
-        }
-
         Object[] params = new Object[parameters.length];
         for (int i = 0; i < params.length; i++)
         {
