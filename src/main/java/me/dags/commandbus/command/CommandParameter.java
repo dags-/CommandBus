@@ -58,7 +58,6 @@ class CommandParameter {
 
     private final Text id;
     private final String name;
-    private final Class<?> type;
     private final boolean join;
     private final boolean caller;
     private final boolean collect;
@@ -71,7 +70,6 @@ class CommandParameter {
             this.join = false;
             this.caller = true;
             this.collect = false;
-            this.type = parameter.getType();
             this.element = GenericArguments.none();
         } else if (parameter.isAnnotationPresent(All.class) || Collection.class.equals(parameter.getType())) {
             if (!Collection.class.equals(parameter.getType())) {
@@ -80,13 +78,13 @@ class CommandParameter {
             }
             All all = parameter.getAnnotation(All.class);
             ParameterizedType paramT = (ParameterizedType) parameter.getParameterizedType();
+            Class<?> type = (Class<?>) paramT.getActualTypeArguments()[0];
             this.id = Text.of(id);
             this.join = false;
             this.caller = false;
             this.collect = true;
-            this.type = (Class<?>) paramT.getActualTypeArguments()[0];
             this.element = of(type, id);
-            this.name = all != null ? all.value() : type.getSimpleName().toLowerCase();
+            this.name = all != null && !all.value().isEmpty() ? all.value() : type.getSimpleName().toLowerCase();
             CommandParameter.typeCheck(type, parameter);
         } else if (parameter.isAnnotationPresent(Join.class)) {
             if (!String.class.equals(parameter.getType())) {
@@ -94,23 +92,23 @@ class CommandParameter {
                 throw new ParameterAnnotationException(warn, parameter.getName(), String.class);
             }
             Join join = parameter.getAnnotation(Join.class);
+            Class<?> type = String.class;
             this.id = Text.of(id);
             this.join = true;
             this.caller = false;
             this.collect = false;
-            this.type = String.class;
-            this.name = join != null ? join.value() : type.getSimpleName().toLowerCase();
+            this.name = (join != null && !join.value().isEmpty() ? join.value() : type.getSimpleName().toLowerCase()) + "...";
             this.element = GenericArguments.remainingJoinedStrings(Text.of(id));
             CommandParameter.typeCheck(type, parameter);
         } else {
             One one = parameter.getAnnotation(One.class);
+            Class<?> type = parameter.getType();
             this.id = Text.of(id);
             this.join = false;
             this.caller = false;
             this.collect = false;
-            this.type = parameter.getType();
             this.element = of(type, id);
-            this.name = one != null ? one.value() : type.getSimpleName().toLowerCase();
+            this.name = one != null && !one.value().isEmpty() ? one.value() : type.getSimpleName().toLowerCase();
             CommandParameter.typeCheck(type, parameter);
         }
     }

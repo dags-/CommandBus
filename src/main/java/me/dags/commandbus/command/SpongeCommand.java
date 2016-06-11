@@ -29,17 +29,18 @@ import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.util.Tristate;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * @author dags <dags@dags.me>
  */
 public class SpongeCommand implements CommandCallable {
+
+    private static final Text NO_PERM = Text.builder("You do not have permission to do that!").color(TextColors.RED).build();
+    private static final Text NOT_FOUND = Text.builder("Command not recognised").color(TextColors.GRAY).build();
 
     private final CommandNode root;
 
@@ -71,10 +72,11 @@ public class SpongeCommand implements CommandCallable {
             if (result == Tristate.TRUE) {
                 return CommandResult.success();
             } else if (result == Tristate.FALSE) {
-                source.sendMessage(Text.of("You do not have permission to do that, or the command does not exist!"));
+                source.sendMessage(NO_PERM);
                 return CommandResult.empty();
             }
         }
+        source.sendMessage(NOT_FOUND);
         return CommandResult.empty();
     }
 
@@ -111,18 +113,24 @@ public class SpongeCommand implements CommandCallable {
 
     @Override
     public Optional<? extends Text> getShortDescription(CommandSource source) {
-        return Optional.of(getUsage(source));
+        return Optional.empty();
     }
 
     @Override
     public Optional<? extends Text> getHelp(CommandSource source) {
-        return Optional.of(getUsage(source));
+        Text.Builder builder = Text.builder();
+        Iterator<String> usage = root.usage(source).iterator();
+        while (usage.hasNext()) {
+            builder.append(Text.of(usage.next()));
+            if (usage.hasNext()) {
+                builder.append(Text.NEW_LINE);
+            }
+        }
+        return Optional.of(builder.build());
     }
 
     @Override
     public Text getUsage(CommandSource source) {
-        Text.Builder builder = Text.builder();
-        root.usage(source).forEach(s -> builder.append(Text.NEW_LINE).append(Text.of(s)));
-        return builder.build();
+        return Text.EMPTY;
     }
 }

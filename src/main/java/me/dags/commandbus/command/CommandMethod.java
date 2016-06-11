@@ -175,7 +175,7 @@ public class CommandMethod {
         }
 
         public Tristate invoke(CommandSource source) {
-            if (!method.command().perm().isEmpty() && source.hasPermission(method.command().perm())) {
+            if (!method.command().perm().isEmpty() && !source.hasPermission(method.command().perm())) {
                 return Tristate.FALSE;
             }
             try {

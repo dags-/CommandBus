@@ -116,7 +116,7 @@ public class CommandNode {
 
     public Collection<String> usage(CommandSource source) {
         Set<String> set = new LinkedHashSet<>();
-        usage(source, main, set);
+        usage(source, "/" + main, set);
         return set;
     }
 
@@ -127,7 +127,7 @@ public class CommandNode {
             }
         }
         for (CommandNode child : children) {
-            child.usage(source, parent + " " + main, set);
+            child.usage(source, parent + " " + child.main, set);
         }
     }
 
