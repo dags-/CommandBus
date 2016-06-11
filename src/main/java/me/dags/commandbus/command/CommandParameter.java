@@ -87,6 +87,7 @@ class CommandParameter {
             this.type = (Class<?>) paramT.getActualTypeArguments()[0];
             this.element = of(type, id);
             this.name = all != null ? all.value() : type.getSimpleName().toLowerCase();
+            CommandParameter.typeCheck(type, parameter);
         } else if (parameter.isAnnotationPresent(Join.class)) {
             if (!String.class.equals(parameter.getType())) {
                 String warn = "Parameter %s is annotated with @Join but is not of type %s";
@@ -100,6 +101,7 @@ class CommandParameter {
             this.type = String.class;
             this.name = join != null ? join.value() : type.getSimpleName().toLowerCase();
             this.element = GenericArguments.remainingJoinedStrings(Text.of(id));
+            CommandParameter.typeCheck(type, parameter);
         } else {
             One one = parameter.getAnnotation(One.class);
             this.id = Text.of(id);
@@ -109,8 +111,8 @@ class CommandParameter {
             this.type = parameter.getType();
             this.element = of(type, id);
             this.name = one != null ? one.value() : type.getSimpleName().toLowerCase();
+            CommandParameter.typeCheck(type, parameter);
         }
-        CommandParameter.typeCheck(type, parameter);
     }
 
     public Text getId() {
