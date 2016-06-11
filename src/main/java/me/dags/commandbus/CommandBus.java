@@ -24,15 +24,12 @@
 
 package me.dags.commandbus;
 
-import me.dags.commandbus.annotation.Command;
-import me.dags.commandbus.command.SpongeCommand;
 import me.dags.commandbus.exception.CommandRegistrationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.plugin.PluginContainer;
 
-import java.lang.reflect.Method;
 import java.util.Optional;
 
 /**
@@ -46,25 +43,22 @@ import java.util.Optional;
  * submitted to Sponge via the submit() method - all subcommands of a given command
  * should be registered through the same CommandBus instance, before being submitted.
  */
-public final class CommandBus
-{
-    private final Registry registry = new Registry(this);
+public final class CommandBus {
+
+    private final Registrar registrar = new Registrar(this);
     private final boolean logging;
     private final Logger logger;
 
-    private CommandBus()
-    {
+    private CommandBus() {
         this(true);
     }
 
-    private CommandBus(boolean logging)
-    {
+    private CommandBus(boolean logging) {
         this.logging = logging;
         this.logger = LoggerFactory.getLogger(CommandBus.class);
     }
 
-    private CommandBus(Logger logger)
-    {
+    private CommandBus(Logger logger) {
         this.logging = true;
         this.logger = logger;
     }
@@ -78,24 +72,18 @@ public final class CommandBus
      * @param classes The class(es) to register.
      * @return The current CommandBus instance (for chaining).
      */
-    public CommandBus register(Class<?>... classes)
-    {
-        for (Class<?> c : classes)
-        {
+    public CommandBus register(Class<?>... classes) {
+        for (Class<?> c : classes) {
             register(c);
         }
         return this;
     }
 
-    private void register(Class<?> clazz)
-    {
-        try
-        {
+    private void register(Class<?> clazz) {
+        try {
             Object object = clazz.newInstance();
             register(object);
-        }
-        catch (InstantiationException | IllegalAccessException e)
-        {
+        } catch (InstantiationException | IllegalAccessException e) {
             error("Failed to instantiate class {}, make sure there is an accessible default constructor", clazz);
             e.printStackTrace();
         }
@@ -111,34 +99,15 @@ public final class CommandBus
      * @param objects The object(s) to register.
      * @return The current CommandBus instance (for chaining).
      */
-    public CommandBus register(Object... objects)
-    {
-        for (Object o : objects)
-        {
+    public CommandBus register(Object... objects) {
+        for (Object o : objects) {
             register(o);
         }
         return this;
     }
 
-    private void register(Object object)
-    {
-        Class<?> c = object.getClass();
-        int count = 0;
-        do
-        {
-            for (Method method : object.getClass().getDeclaredMethods())
-            {
-                if (method.isAnnotationPresent(Command.class))
-                {
-                    count++;
-                    SpongeCommand command = new SpongeCommand(object, method, method.getAnnotation(Command.class));
-                    registry.add(command);
-                }
-            }
-            c = c.getSuperclass();
-        }
-        while (!c.equals(Object.class));
-        info("Discovered {} command methods in class {}", count, object.getClass().getSimpleName());
+    private void register(Object object) {
+        registrar.register(object);
     }
 
     /**
@@ -148,38 +117,30 @@ public final class CommandBus
      *
      * @param plugin The Plugin associated with the Commands to be registered.
      */
-    public void submit(Object plugin)
-    {
+    public void submit(Object plugin) {
         Optional<PluginContainer> container = Sponge.getPluginManager().fromInstance(plugin);
-        if (!container.isPresent())
-        {
+        if (!container.isPresent()) {
             String warn = "Attempted to register commands for %s, but it is not a valid Sponge Plugin!";
             throw new CommandRegistrationException(warn, plugin.getClass());
         }
         info("Registering commands for {}", container.get().getName());
-        registry.submit(plugin);
+        registrar.submit(plugin);
     }
 
-    protected void info(String message, Object... args)
-    {
-        if (logging)
-        {
+    protected void info(String message, Object... args) {
+        if (logging) {
             logger.info(message, args);
         }
     }
 
-    protected void warn(String message, Object... args)
-    {
-        if (logging)
-        {
+    protected void warn(String message, Object... args) {
+        if (logging) {
             logger.warn(message, args);
         }
     }
 
-    protected void error(String message, Object... args)
-    {
-        if (logging)
-        {
+    protected void error(String message, Object... args) {
+        if (logging) {
             logger.error(message, args);
         }
     }
@@ -189,8 +150,7 @@ public final class CommandBus
      *
      * @return The newly created CommandBus instance using the default logger.
      */
-    public static CommandBus newInstance()
-    {
+    public static CommandBus newInstance() {
         return new CommandBus();
     }
 
@@ -200,10 +160,8 @@ public final class CommandBus
      * @param logger The logger this new CommandBus should use
      * @return The newly created CommandBus using the provided logger.
      */
-    public static CommandBus newInstance(Logger logger)
-    {
-        if (logger == null)
-        {
+    public static CommandBus newInstance(Logger logger) {
+        if (logger == null) {
             return newInstance();
         }
         return new CommandBus(logger);
@@ -214,8 +172,7 @@ public final class CommandBus
      *
      * @return The newly created CommandBus with logging disabled.
      */
-    public static CommandBus newSilentInstance()
-    {
+    public static CommandBus newSilentInstance() {
         return new CommandBus(false);
     }
 }

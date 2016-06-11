@@ -24,50 +24,61 @@
 
 package me.dags.commandbus.command;
 
+import org.spongepowered.api.command.args.CommandArgs;
+import org.spongepowered.api.command.args.parsing.SingleArg;
+
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @author dags <dags@dags.me>
  */
+public class CommandPath {
 
-/**
- * Used internally by CommandBus to describe the 'path' of a command.
- */
-public class CommandPath
-{
-    private final String[] path;
+    private final String raw;
+    private final String[] parts;
+    private int depth = 0;
 
-    public CommandPath(String in)
-    {
-        this.path = in.toLowerCase().split(" ");
+    public CommandPath(String raw) {
+        this.raw = raw;
+        this.parts = raw.split(" ");
     }
 
-    public String all()
-    {
-        return to(maxDepth());
+    public boolean hasNext() {
+        return depth < parts.length;
     }
 
-    public String at(int depth)
-    {
-        return depth < path.length ? path[depth] : "";
+    public String currentArg() {
+        return hasNext() ? parts[depth] : lastArg();
     }
 
-    public String to(int depth)
-    {
-        StringBuilder sb = new StringBuilder(depth < 0 ? "" : path[0]);
-        for (int i = 1; i <= depth && i < path.length; i++)
-            sb.append(" ").append(path[i]);
-        return sb.toString();
+    public String nextArg() {
+        return parts[depth++];
     }
 
-    public String from(int depth)
-    {
-        StringBuilder sb = new StringBuilder(path[depth]);
-        for (int i = depth; i < maxDepth() && i < path.length; i++)
-            sb.append(" ").append(path[i]);
-        return sb.toString();
+    public String lastArg() {
+        return depth > 0 ? parts[depth - 1] : parts[0];
     }
 
-    public int maxDepth()
-    {
-        return path.length - 1;
+    public int remaining() {
+        return parts.length - depth;
+    }
+
+    private int startPos(int toDepth) {
+        int start = 0;
+        for (int i = start; i < toDepth; i++) {
+            start += parts[i].length() + 1;
+        }
+        return start;
+    }
+
+    public CommandArgs remainingArgs() {
+        List<SingleArg> args = new ArrayList<>();
+        for (int i = depth; i < parts.length; i++) {
+            String part = parts[i];
+            int start = startPos(i), end = start + part.length();
+            args.add(new SingleArg(part, start, end));
+        }
+        return new CommandArgs(raw, args);
     }
 }

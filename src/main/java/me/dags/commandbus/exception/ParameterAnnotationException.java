@@ -32,10 +32,9 @@ package me.dags.commandbus.exception;
  * Thrown if the parameter of a @Command method is of a type that cannot
  * be resolved or handled by CommandBus.
  */
-public class ParameterAnnotationException extends RuntimeException
-{
-    public ParameterAnnotationException(String warn, Object... args)
-    {
+public class ParameterAnnotationException extends RuntimeException {
+
+    public ParameterAnnotationException(String warn, Object... args) {
         super(String.format(warn, args));
     }
 }

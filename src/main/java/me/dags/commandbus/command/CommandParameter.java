@@ -39,7 +39,6 @@ import org.spongepowered.api.text.Text;
 import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
 
-import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.util.Collection;
@@ -55,12 +54,93 @@ import java.util.function.Function;
 /**
  * Used internally by CommandBus to hold information about a Method Parameter.
  */
-public class CommandParameter
-{
+class CommandParameter {
+
+    private final Text id;
+    private final String name;
+    private final Class<?> type;
+    private final boolean join;
+    private final boolean caller;
+    private final boolean collect;
+    private final CommandElement element;
+
+    CommandParameter(Parameter parameter, String id) {
+        if (parameter.isAnnotationPresent(Caller.class)) {
+            this.id = Text.of(id);
+            this.name = "@caller";
+            this.join = false;
+            this.caller = true;
+            this.collect = false;
+            this.type = parameter.getType();
+            this.element = GenericArguments.none();
+        } else if (parameter.isAnnotationPresent(All.class) || Collection.class.equals(parameter.getType())) {
+            if (!Collection.class.equals(parameter.getType())) {
+                String warn = "Parameter %s is annotated with @Collect but is not of type %s";
+                throw new ParameterAnnotationException(warn, parameter.getName(), Collection.class);
+            }
+            All all = parameter.getAnnotation(All.class);
+            ParameterizedType paramT = (ParameterizedType) parameter.getParameterizedType();
+            this.id = Text.of(id);
+            this.join = false;
+            this.caller = false;
+            this.collect = true;
+            this.type = (Class<?>) paramT.getActualTypeArguments()[0];
+            this.element = of(type, id);
+            this.name = all != null ? all.value() : type.getSimpleName().toLowerCase();
+        } else if (parameter.isAnnotationPresent(Join.class)) {
+            if (!String.class.equals(parameter.getType())) {
+                String warn = "Parameter %s is annotated with @Join but is not of type %s";
+                throw new ParameterAnnotationException(warn, parameter.getName(), String.class);
+            }
+            Join join = parameter.getAnnotation(Join.class);
+            this.id = Text.of(id);
+            this.join = true;
+            this.caller = false;
+            this.collect = false;
+            this.type = String.class;
+            this.name = join != null ? join.value() : type.getSimpleName().toLowerCase();
+            this.element = GenericArguments.remainingJoinedStrings(Text.of(id));
+        } else {
+            One one = parameter.getAnnotation(One.class);
+            this.id = Text.of(id);
+            this.join = false;
+            this.caller = false;
+            this.collect = false;
+            this.type = parameter.getType();
+            this.element = of(type, id);
+            this.name = one != null ? one.value() : type.getSimpleName().toLowerCase();
+        }
+        CommandParameter.typeCheck(type, parameter);
+    }
+
+    public Text getId() {
+        return id;
+    }
+
+    public boolean collect() {
+        return collect;
+    }
+
+    public boolean caller() {
+        return caller;
+    }
+
+    public boolean join() {
+        return join;
+    }
+
+    public CommandElement element() {
+        return this.element;
+    }
+
+    @Override
+    public String toString() {
+        return "<" + name + ">";
+    }
+
     private static final Map<Class<?>, Function<String, CommandElement>> types = init();
 
-    private static Map<Class<?>, Function<String, CommandElement>> init()
-    {
+    private static Map<Class<?>, Function<String, CommandElement>> init() {
         Map<Class<?>, Function<String, CommandElement>> map = new HashMap<>();
         map.put(boolean.class, s -> GenericArguments.bool(Text.of(s)));
         map.put(Boolean.class, map.get(boolean.class));
@@ -77,133 +157,25 @@ public class CommandParameter
         return Collections.unmodifiableMap(map);
     }
 
-    private final String key;
-    private final Class<?> type;
-    private final boolean idKey;
-    private final boolean caller;
-    private final boolean all;
-    private final boolean join;
-
-    private CommandParameter(String key, int id, Class<?> type, boolean caller, boolean collect, boolean remaining)
-    {
-        this.idKey = key.isEmpty();
-        this.key = idKey ? "" + id : key;
-        this.type = type;
-        this.caller = caller;
-        this.all = collect;
-        this.join = remaining;
-    }
-
-    public String key()
-    {
-        return key;
-    }
-
-    public Class<?> type()
-    {
-        return type;
-    }
-
-    public boolean caller()
-    {
-        return caller;
-    }
-
-    public boolean collect()
-    {
-        return all;
-    }
-
-    public boolean join()
-    {
-        return join;
-    }
-
-    public CommandElement element()
-    {
-        if (caller())
-        {
-            return GenericArguments.none();
-        }
-        if (join())
-        {
-            return GenericArguments.remainingJoinedStrings(Text.of(key));
-        }
-        return CommandParameter.of(type, key);
-    }
-
-    @Override
-    public String toString()
-    {
-        return "<" + (idKey ? type().getSimpleName().toLowerCase() : key) + ">";
-    }
-
-    protected static CommandParameter from(Object owner, Method method, Parameter parameter, int id)
-    {
-        if (parameter.isAnnotationPresent(Caller.class))
-        {
-            return new CommandParameter("@", id, parameter.getType(), true, false, false);
-        }
-        else if (parameter.isAnnotationPresent(All.class) || Collection.class.equals(parameter.getType()))
-        {
-            if (!Collection.class.equals(parameter.getType()))
-            {
-                String warn = "Parameter %s in Method %s in Class %s is annotated with @Collect but is not of type %s";
-                throw new ParameterAnnotationException(warn, parameter, method.getName(), owner.getClass(), Collection.class);
-            }
-            ParameterizedType paramT = (ParameterizedType) parameter.getParameterizedType();
-            Class<?> type = (Class<?>) paramT.getActualTypeArguments()[0];
-            CommandParameter.typeCheck(type, parameter, method, owner);
-            All collect = parameter.getAnnotation(All.class);
-            String name = collect != null ? collect.value() : "";
-            return new CommandParameter(name, id, type, false, true, false);
-        }
-        else if (parameter.isAnnotationPresent(Join.class))
-        {
-            if (!String.class.equals(parameter.getType()))
-            {
-                String warn = "Parameter %s in Method %s in Class %s is annotated with @Join but is not of type %s";
-                throw new ParameterAnnotationException(warn, parameter, method.getName(), owner.getClass(), String.class);
-            }
-            CommandParameter.typeCheck(parameter.getType(), parameter, method, owner);
-            Join remaining = parameter.getAnnotation(Join.class);
-            return new CommandParameter(remaining.value(), id, parameter.getType(), false, false, true);
-        }
-        else
-        {
-            CommandParameter.typeCheck(parameter.getType(), parameter, method, owner);
-            One one = parameter.getAnnotation(One.class);
-            String name = one != null ? one.value() : "";
-            return new CommandParameter(name, id, parameter.getType(), false, false, false);
+    private static void typeCheck(Class<?> type, Parameter source) {
+        if (!CommandParameter.validParameterType(type)) {
+            String warn = "Parameter %s is not supported a supported type %s!";
+            throw new ParameterAnnotationException(warn, source, type);
         }
     }
 
-    private static void typeCheck(Class<?> type, Parameter source, Method method, Object owner)
-    {
-        if (!CommandParameter.validParameterType(type))
-        {
-            String warn = "Parameter %s in Method %s in Class %s is not supported!";
-            throw new ParameterAnnotationException(warn, source, method.getName(), owner.getClass());
-        }
-    }
-
-    public static boolean validParameterType(Class<?> type)
-    {
+    public static boolean validParameterType(Class<?> type) {
         return types.containsKey(type) || CatalogType.class.isAssignableFrom(type);
     }
 
     @SuppressWarnings("unchecked")
-    public static CommandElement of(Class<?> type, String key)
-    {
+    public static CommandElement of(Class<?> type, String key) {
         Function<String, CommandElement> f = types.get(type);
-        if (f != null)
-        {
-            return GenericArguments.optional(f.apply(key));
+        if (f != null) {
+            return f.apply(key);
         }
-        if (CatalogType.class.isAssignableFrom(type))
-        {
-            CommandElement e = GenericArguments.catalogedElement(Text.of(key), (Class<? extends CatalogType>) type);
-            return GenericArguments.optional(e);
+        if (CatalogType.class.isAssignableFrom(type)) {
+            return GenericArguments.catalogedElement(Text.of(key), (Class<? extends CatalogType>) type);
         }
         return GenericArguments.none();
     }

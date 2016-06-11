@@ -38,8 +38,8 @@ import java.lang.annotation.Target;
  */
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface All
-{
+public @interface All {
+
     /**
      * Optionally set the name of this variable (used in generated command info).
      *

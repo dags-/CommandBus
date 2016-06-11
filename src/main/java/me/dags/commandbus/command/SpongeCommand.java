@@ -24,141 +24,105 @@
 
 package me.dags.commandbus.command;
 
-import me.dags.commandbus.annotation.Command;
-import me.dags.commandbus.exception.ParameterAnnotationException;
+import org.spongepowered.api.command.CommandCallable;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
-import org.spongepowered.api.command.args.CommandContext;
-import org.spongepowered.api.command.args.CommandElement;
-import org.spongepowered.api.command.args.GenericArguments;
-import org.spongepowered.api.command.spec.CommandExecutor;
-import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.text.Text;
+import org.spongepowered.api.util.Tristate;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.util.LinkedHashSet;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.Optional;
 
 /**
  * @author dags <dags@dags.me>
  */
+public class SpongeCommand implements CommandCallable {
 
-public class SpongeCommand extends SpongeCommandBase implements CommandExecutor
-{
-    private final Object owner;
-    private final Method target;
-    private final String permission;
-    private final String description;
-    private final CommandParameter[] parameters;
+    private final CommandNode root;
 
-    public SpongeCommand(Object owner, Method target, Command command)
-    {
-        super(command.parent(), command.aliases());
+    public SpongeCommand(CommandNode root) {
+        this.root = root;
+    }
 
-        Parameter[] parameters = target.getParameters();
+    public List<String> aliases() {
+        return root.aliases();
+    }
 
-        this.owner = owner;
-        this.target = target;
-        this.permission = command.perm();
-        this.description = command.desc();
-        this.parameters = new CommandParameter[parameters.length];
-        for (int i = 0; i < parameters.length; i++)
-        {
-            this.parameters[i] = CommandParameter.from(owner, target, parameters[i], i);
-            if (this.parameters[i].join() && i + 1 < parameters.length)
-            {
-                String warn = "The @Retaining annotation should only by used on the last Parameter in a Method: %s in %s";
-                throw new ParameterAnnotationException(warn, target.getName(), owner);
+    private List<CommandMethod.Instance> findMatches(CommandSource source, String rawArgs) {
+        CommandNode parent = root;
+        CommandPath args = new CommandPath(rawArgs);
+        List<CommandMethod.Instance> matches = new ArrayList<>();
+        while (args.hasNext() && parent != null) {
+            parent.populate(source, args, matches);
+            parent = parent.getChild(args.nextArg());
+        }
+        Collections.sort(matches);
+        return matches;
+    }
+
+    @Override
+    public CommandResult process(CommandSource source, String rawArgs) throws CommandException {
+        List<CommandMethod.Instance> commands = findMatches(source, rawArgs);
+        for (CommandMethod.Instance instance : commands) {
+            Tristate result = instance.invoke(source);
+            if (result == Tristate.TRUE) {
+                return CommandResult.success();
+            } else if (result == Tristate.FALSE) {
+                source.sendMessage(Text.of("You do not have permission to do that, or the command does not exist!"));
+                return CommandResult.empty();
             }
         }
+        return CommandResult.empty();
     }
 
-    public CommandSpec spec()
-    {
-        CommandSpec.Builder builder = CommandSpec.builder();
-
-        Text desc = Text.of(description.isEmpty() ? this.toString() : description);
-        children.forEach(c -> builder.child(c.spec(), c.aliases()));
-        if (!permission.isEmpty()) builder.permission(permission);
-        builder.extendedDescription(extendedInfo());
-        builder.arguments(sequence());
-        builder.description(desc);
-        builder.executor(this);
-
-        return builder.build();
+    @Override
+    public List<String> getSuggestions(CommandSource source, String arguments) throws CommandException {
+        CommandPath args = new CommandPath(arguments);
+        CommandNode parent = root, previous = parent;
+        while (args.hasNext()) {
+            previous = parent;
+            parent = parent.getChild(args.currentArg());
+            if (parent == null) {
+                break;
+            }
+            args.nextArg();
+        }
+        if (parent == null) {
+            parent = previous;
+            List<String> partial = parent.suggestions(args.currentArg());
+            if (partial.size() == 0) {
+                List<CommandMethod.Instance> commands = findMatches(source, arguments);
+                for (CommandMethod.Instance command: commands) {
+                    partial.addAll(command.getSuggestions(source));
+                }
+            }
+            return partial;
+        }
+        return parent.suggestions();
     }
 
-    private CommandElement sequence()
-    {
-        List<CommandElement> elements = Stream.of(parameters)
-                .filter(p -> !p.caller())
-                .map(CommandParameter::element)
-                .collect(Collectors.toList());
-
-        return GenericArguments.seq(elements.toArray(new CommandElement[elements.size()]));
+    @Override
+    public boolean testPermission(CommandSource source) {
+        return true;
     }
 
-    private Text extendedInfo()
-    {
-        Set<String> info = new LinkedHashSet<>();
-        extendedInfo(info);
+    @Override
+    public Optional<? extends Text> getShortDescription(CommandSource source) {
+        return Optional.of(getUsage(source));
+    }
+
+    @Override
+    public Optional<? extends Text> getHelp(CommandSource source) {
+        return Optional.of(getUsage(source));
+    }
+
+    @Override
+    public Text getUsage(CommandSource source) {
         Text.Builder builder = Text.builder();
-        builder.append(Text.of(this.toString()));
-        info.remove(this.toString());
-        info.forEach(s -> builder.append(Text.NEW_LINE).append(Text.of(s)));
+        root.usage(source).forEach(s -> builder.append(Text.NEW_LINE).append(Text.of(s)));
         return builder.build();
-    }
-
-    private void extendedInfo(Set<String> info)
-    {
-        info.add(this.toString());
-        children.forEach(c -> info.add(c.toString()));
-    }
-
-    @Override
-    public CommandResult execute(CommandSource source, CommandContext context) throws CommandException
-    {
-        Object[] params = new Object[parameters.length];
-        for (int i = 0; i < params.length; i++)
-        {
-            CommandParameter p = parameters[i];
-            params[i] = p.caller() ? source : p.collect() ? context.getAll(p.key()) : context.getOne(p.key()).get();
-        }
-
-        try
-        {
-            target.invoke(owner, params);
-            return CommandResult.success();
-        }
-        catch (InvocationTargetException | IllegalAccessException e)
-        {
-            e.printStackTrace();
-            return CommandResult.empty();
-        }
-    }
-
-    @Override
-    public String toString()
-    {
-        StringBuilder sb = new StringBuilder("/");
-        if (!isMain())
-        {
-            sb.append(parent.command()).append(" ");
-        }
-        sb.append(alias());
-        for (CommandParameter parameter : parameters)
-        {
-            if (!parameter.caller())
-            {
-                sb.append(" ").append(parameter);
-            }
-        }
-        return sb.toString();
     }
 }

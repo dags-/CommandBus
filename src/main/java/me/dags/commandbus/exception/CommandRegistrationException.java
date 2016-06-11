@@ -32,10 +32,9 @@ package me.dags.commandbus.exception;
  * Thrown if an object is passed to the CommandBus submit(object) method that is
  * not a Sponge plugin.
  */
-public class CommandRegistrationException extends RuntimeException
-{
-    public CommandRegistrationException(String warn, Object... args)
-    {
+public class CommandRegistrationException extends RuntimeException {
+
+    public CommandRegistrationException(String warn, Object... args) {
         super(String.format(warn, args));
     }
 }

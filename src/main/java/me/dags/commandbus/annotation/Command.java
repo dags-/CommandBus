@@ -40,8 +40,8 @@ import java.lang.annotation.Target;
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Command
-{
+public @interface Command {
+
     /**
      * Provide either a single String alias for this Command, or an Array of aliases.
      * The first alias provided will be used as the Command's 'main' alias.
@@ -51,11 +51,11 @@ public @interface Command
     /**
      * If this @Command represents a sub-command, the parent command(s) alias(es) should
      * be specified here.
-     *
+     * <p>
      * Example:
      * For subcommand2 in: '/maincommand subcommand1 subcommand2', the parent would be
      * 'parent = "maincommand subcommand1"'.
-     *
+     * <p>
      * If a given subcommand's parent(s) has/have not been registered with the CommandBus,
      * CommandBus will generate an empty 'Command stub' to represent it.
      */

@@ -39,8 +39,8 @@ import java.lang.annotation.Target;
  */
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Join
-{
+public @interface Join {
+
     /**
      * Optionally set the name of this variable (used in generated command info).
      *
