@@ -48,9 +48,7 @@ public class CommandNode {
     }
 
     public CommandNode addAliases(String... aliases) {
-        for (String s : aliases) {
-            this.aliases.add(s);
-        }
+        Collections.addAll(this.aliases, aliases);
         return this;
     }
 
@@ -65,7 +63,7 @@ public class CommandNode {
         return node;
     }
 
-    public CommandNode getChild(String node) {
+    CommandNode getChild(String node) {
         for (CommandNode child : children) {
             if (child.matches(node)) {
                 return child;
@@ -74,7 +72,7 @@ public class CommandNode {
         return null;
     }
 
-    public void populate(CommandSource source, CommandPath path, List<CommandMethod.Instance> list) {
+    void populate(CommandSource source, CommandPath path, List<CommandMethod.Instance> list) {
         for (CommandMethod method : this.methods) {
             if (path.remaining() == method.parameterCount() || (method.join() && path.remaining() > method.parameterCount())) {
                 CommandArgs args = path.remainingArgs();
@@ -91,11 +89,11 @@ public class CommandNode {
         }
     }
 
-    public List<String> aliases() {
+    List<String> aliases() {
         return new ArrayList<>(aliases);
     }
 
-    public List<String> suggestions() {
+    List<String> suggestions() {
         List<String> list = new ArrayList<>();
         for (CommandNode child : this.children) {
             list.addAll(child.aliases);
@@ -103,7 +101,7 @@ public class CommandNode {
         return list;
     }
 
-    public List<String> suggestions(String match) {
+    List<String> suggestions(String match) {
         List<String> list = new ArrayList<>();
         for (CommandNode child : this.children) {
             for (String s : child.aliases) {
@@ -115,7 +113,21 @@ public class CommandNode {
         return list;
     }
 
-    public Collection<String> usage(CommandSource source) {
+    boolean testPermission(CommandSource source) {
+        for (CommandMethod method : methods) {
+            if (method.command().perm().isEmpty() || source.hasPermission(method.command().perm())) {
+                return true;
+            }
+        }
+        for (CommandNode child : children) {
+            if (child.testPermission(source)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    Collection<String> usage(CommandSource source) {
         Set<String> set = new LinkedHashSet<>();
         usage(source, "/" + main, set);
         return set.stream().sorted().collect(Collectors.toList());
@@ -132,7 +144,7 @@ public class CommandNode {
         }
     }
 
-    public boolean matches(String alias) {
+    private boolean matches(String alias) {
         return aliases.contains(alias);
     }
 

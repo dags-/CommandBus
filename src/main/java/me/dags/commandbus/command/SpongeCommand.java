@@ -108,7 +108,7 @@ public class SpongeCommand implements CommandCallable {
 
     @Override
     public boolean testPermission(CommandSource source) {
-        return true;
+        return root.testPermission(source);
     }
 
     @Override

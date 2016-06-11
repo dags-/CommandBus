@@ -72,19 +72,19 @@ public class CommandMethod {
         return command;
     }
 
-    public boolean join() {
+    boolean join() {
         return join;
     }
 
-    public int parameterCount() {
+    int parameterCount() {
         return argCount;
     }
 
-    public CommandElement parameters() {
+    CommandElement parameters() {
         return element;
     }
 
-    public String usage() {
+    String usage() {
         StringBuilder builder = new StringBuilder();
         boolean first = true;
         for (CommandParameter parameter : parameters) {
@@ -96,7 +96,7 @@ public class CommandMethod {
         return builder.toString();
     }
 
-    public boolean fitsContext(CommandContext context) {
+    boolean fitsContext(CommandContext context) {
         for (CommandParameter parameter : parameters) {
             if (parameter.caller()) {
                 continue;
@@ -109,7 +109,7 @@ public class CommandMethod {
         return true;
     }
 
-    public void invoke(CommandSource source, CommandContext context) throws Exception {
+    void invoke(CommandSource source, CommandContext context) throws Exception {
         Object[] args = new Object[parameters.length];
         for (int i = 0; i < parameters.length; i++) {
             CommandParameter parameter = parameters[i];
@@ -158,23 +158,23 @@ public class CommandMethod {
         return elements;
     }
 
-    public static class Instance implements Comparable<Instance> {
+    static class Instance implements Comparable<Instance> {
 
         private final CommandMethod method;
         private final CommandArgs commandArgs;
         private final CommandContext commandContext;
 
-        public Instance(CommandMethod method, CommandArgs commandArgs, CommandContext commandContext) {
+        Instance(CommandMethod method, CommandArgs commandArgs, CommandContext commandContext) {
             this.method = method;
             this.commandArgs = commandArgs;
             this.commandContext = commandContext;
         }
 
-        public List<String> getSuggestions(CommandSource source) {
+        List<String> getSuggestions(CommandSource source) {
             return method.parameters().complete(source, commandArgs, commandContext);
         }
 
-        public Tristate invoke(CommandSource source) {
+        Tristate invoke(CommandSource source) {
             if (!method.command().perm().isEmpty() && !source.hasPermission(method.command().perm())) {
                 return Tristate.FALSE;
             }

@@ -113,23 +113,23 @@ class CommandParameter {
         }
     }
 
-    public Text getId() {
+    Text getId() {
         return id;
     }
 
-    public boolean collect() {
+    boolean collect() {
         return collect;
     }
 
-    public boolean caller() {
+    boolean caller() {
         return caller;
     }
 
-    public boolean join() {
+    boolean join() {
         return join;
     }
 
-    public CommandElement element() {
+    CommandElement element() {
         return this.element;
     }
 
