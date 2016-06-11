@@ -30,6 +30,7 @@ import org.spongepowered.api.command.args.CommandArgs;
 import org.spongepowered.api.command.args.CommandContext;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author dags <dags@dags.me>
@@ -117,7 +118,7 @@ public class CommandNode {
     public Collection<String> usage(CommandSource source) {
         Set<String> set = new LinkedHashSet<>();
         usage(source, "/" + main, set);
-        return set;
+        return set.stream().sorted().collect(Collectors.toList());
     }
 
     private void usage(CommandSource source, String parent, Set<String> set) {
