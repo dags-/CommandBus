@@ -57,7 +57,7 @@ public class CommandMethod {
         this.target = target;
         this.parameters = getParameters(target);
         CommandElement[] elements = toElements(parameters);
-        this.element = GenericArguments.seq(elements);
+        this.element = elements.length == 0 ? GenericArguments.none() : GenericArguments.seq(elements);
         this.argCount = elements.length;
         boolean join = false;
         for (CommandParameter parameter : parameters) {
@@ -188,13 +188,14 @@ public class CommandMethod {
         }
 
         @Override
-        public int compareTo(Instance o) {
-            return method.join ? 1 : -1;
+        public int compareTo(Instance in) {
+            return method.join ? 2 : method.parameterCount() > in.method.parameterCount() ? 1 : -1;
         }
 
         @Override
         public String toString() {
-            return method.toString();
+            String string = method.command().aliases()[0] + " " + method.usage();
+            return method.command().parent().isEmpty() ? string : method.command().parent() + " " + string;
         }
     }
 }

@@ -60,7 +60,12 @@ public class SpongeCommand implements CommandCallable {
             parent.populate(source, args, matches);
             parent = parent.getChild(args.nextArg());
         }
-        Collections.sort(matches);
+        if (parent != null) {
+            parent.populate(source, args, matches);
+        }
+        if (matches.size() > 1) {
+            Collections.sort(matches);
+        }
         return matches;
     }
 
