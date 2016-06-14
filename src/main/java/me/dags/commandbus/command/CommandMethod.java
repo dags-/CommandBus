@@ -34,6 +34,7 @@ import org.spongepowered.api.util.Tristate;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -171,6 +172,7 @@ public class CommandMethod {
         }
 
         List<String> getSuggestions(CommandSource source) {
+            commandArgs.setState(-1);
             return method.parameters().complete(source, commandArgs, commandContext);
         }
 
