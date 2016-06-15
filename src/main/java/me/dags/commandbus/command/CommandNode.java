@@ -72,19 +72,56 @@ public class CommandNode {
         return null;
     }
 
-    void populate(CommandSource source, CommandPath path, List<CommandMethod.Instance> list) {
+    void derp(CommandSource source, CommandInput input, List<CommandMethod.Instance> list) {
         for (CommandMethod method : this.methods) {
-            if (path.remaining() == method.parameterCount() || (method.join() && path.remaining() > method.parameterCount())) {
-                CommandArgs args = path.remainingArgs();
-                CommandContext commandContext = new CommandContext();
+            System.out.println("m: " + method.parameterCount() + " <> r:" + input.remaining());
+            if (method.parameterCount() == input.remaining() || (method.join() && method.parameterCount() >= input.remaining())) {
                 try {
-                    method.parameters().parse(source, args, commandContext);
-                } catch (ArgumentParseException e) {
-                    continue;
+                    CommandArgs commandArgs = input.copyState();
+                    CommandContext context = new CommandContext();
+                    method.parameters().parse(source, commandArgs, context);
+                    if (method.fitsContext(source, context)) {
+                        list.add(new CommandMethod.Instance(method, commandArgs, context));
+                    }
+                } catch (ArgumentParseException ignored) {
+
                 }
-                if (method.fitsContext(commandContext)) {
-                    list.add(new CommandMethod.Instance(method, args, commandContext));
+            }
+        }
+        if (input.currentState().hasNext()) {
+            try {
+                CommandNode child = getChild(input.currentState().next());
+                if (child != null) {
+                    System.out.println("Next: " + child.main);
+                    input.next();
+                    child.derp(source, input, list);
                 }
+            } catch (ArgumentParseException ignored) {
+            }
+        }
+    }
+
+    void derp(CommandSource source, CommandArgs args, int length, List<CommandMethod.Instance> list) {
+        for (CommandMethod method : this.methods) {
+            if (method.parameterCount() == length || (method.join() && method.parameterCount() >= length)) {
+                try {
+                    CommandContext context = new CommandContext();
+                    method.parameters().parse(source, args, context);
+                    if (method.fitsContext(source, context)) {
+                        list.add(new CommandMethod.Instance(method, args, context));
+                    }
+                } catch (ArgumentParseException ignored) {
+                    ignored.printStackTrace();
+                }
+            }
+        }
+        if (args.hasNext()) {
+            try {
+                CommandNode child = getChild(args.next());
+                if (child != null) {
+                    child.derp(source, args, length - 1, list);
+                }
+            } catch (ArgumentParseException ignored) {
             }
         }
     }

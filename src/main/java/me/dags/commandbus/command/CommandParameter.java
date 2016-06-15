@@ -58,6 +58,7 @@ class CommandParameter {
 
     private final Text id;
     private final String name;
+    private final Class<?> type;
     private final boolean join;
     private final boolean caller;
     private final boolean collect;
@@ -67,6 +68,7 @@ class CommandParameter {
         if (parameter.isAnnotationPresent(Caller.class)) {
             this.id = Text.of(id);
             this.name = "@caller";
+            this.type = parameter.getType();
             this.join = false;
             this.caller = true;
             this.collect = false;
@@ -80,6 +82,7 @@ class CommandParameter {
             ParameterizedType paramT = (ParameterizedType) parameter.getParameterizedType();
             Class<?> type = (Class<?>) paramT.getActualTypeArguments()[0];
             this.id = Text.of(id);
+            this.type = type;
             this.join = false;
             this.caller = false;
             this.collect = true;
@@ -94,6 +97,7 @@ class CommandParameter {
             Join join = parameter.getAnnotation(Join.class);
             Class<?> type = String.class;
             this.id = Text.of(id);
+            this.type = type;
             this.join = true;
             this.caller = false;
             this.collect = false;
@@ -104,6 +108,7 @@ class CommandParameter {
             One one = parameter.getAnnotation(One.class);
             Class<?> type = parameter.getType();
             this.id = Text.of(id);
+            this.type = type;
             this.join = false;
             this.caller = false;
             this.collect = false;
@@ -115,6 +120,10 @@ class CommandParameter {
 
     Text getId() {
         return id;
+    }
+
+    Class<?> type() {
+        return type;
     }
 
     boolean collect() {

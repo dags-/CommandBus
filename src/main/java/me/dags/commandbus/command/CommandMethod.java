@@ -97,13 +97,19 @@ public class CommandMethod {
         return builder.toString();
     }
 
-    boolean fitsContext(CommandContext context) {
+    boolean fitsContext(CommandSource source, CommandContext context) {
+        System.out.println(command().parent() + " " + command().aliases()[0] + " " + usage());
         for (CommandParameter parameter : parameters) {
             if (parameter.caller()) {
+                if (!parameter.type().isInstance(source)) {
+                    System.out.println("WRONG CALLER TYPE");
+                    return false;
+                }
                 continue;
             }
             Optional<?> optional = context.getOne(parameter.getId());
             if (!optional.isPresent()) {
+                System.out.println(parameter.getId() + " NOT PRESENT!");
                 return false;
             }
         }

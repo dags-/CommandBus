@@ -28,11 +28,15 @@ import org.spongepowered.api.command.CommandCallable;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
+import org.spongepowered.api.command.args.CommandArgs;
+import org.spongepowered.api.command.args.parsing.SingleArg;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.util.Tristate;
 
+import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author dags <dags@dags.me>
@@ -52,26 +56,18 @@ public class SpongeCommand implements CommandCallable {
         return root.aliases();
     }
 
-    private List<CommandMethod.Instance> findMatches(CommandSource source, String rawArgs) {
-        CommandNode parent = root;
-        CommandPath args = new CommandPath(rawArgs);
-        List<CommandMethod.Instance> matches = new ArrayList<>();
-        while (args.hasNext() && parent != null) {
-            parent.populate(source, args, matches);
-            parent = parent.getChild(args.nextArg());
+    private List<CommandMethod.Instance> findMatches(CommandSource source, CommandInput input, CommandNode node) {
+        List<CommandMethod.Instance> matchList = new ArrayList<>();
+        node.derp(source, input, matchList);
+        if (matchList.size() > 1) {
+            Collections.sort(matchList);
         }
-        if (parent != null) {
-            parent.populate(source, args, matches);
-        }
-        if (matches.size() > 1) {
-            Collections.sort(matches);
-        }
-        return matches;
+        return matchList;
     }
 
     @Override
     public CommandResult process(CommandSource source, String rawArgs) throws CommandException {
-        List<CommandMethod.Instance> commands = findMatches(source, rawArgs);
+        List<CommandMethod.Instance> commands = findMatches(source, new CommandInput(rawArgs), root);
         for (CommandMethod.Instance instance : commands) {
             Tristate result = instance.invoke(source);
             if (result == Tristate.TRUE) {
@@ -87,28 +83,32 @@ public class SpongeCommand implements CommandCallable {
 
     @Override
     public List<String> getSuggestions(CommandSource source, String arguments) throws CommandException {
-        CommandPath args = new CommandPath(arguments);
-        CommandNode parent = root, previous = parent;
-        while (args.hasNext()) {
-            previous = parent;
-            parent = parent.getChild(args.currentArg());
-            if (parent == null) {
+        List<String> suggestions = new ArrayList<>();
+
+        CommandInput input = new CommandInput(arguments);
+        CommandNode node = root, previous = node;
+        String lastArg = "";
+
+        while (input.currentState().hasNext()) {
+            node = node.getChild(lastArg = input.currentState().peek());
+            if (node == null) {
                 break;
             }
-            args.nextArg();
+            previous = node;
+            input.currentState().next();
+            input.next();
         }
-        if (parent == null) {
-            parent = previous;
-            List<String> partial = parent.suggestions(args.currentArg());
-            if (partial.size() == 0) {
-                List<CommandMethod.Instance> commands = findMatches(source, arguments);
-                for (CommandMethod.Instance command: commands) {
-                    partial.addAll(command.getSuggestions(source));
-                }
-            }
-            return partial;
+
+        if (node == null) {
+            node = previous;
+            suggestions.addAll(node.suggestions(lastArg));
         }
-        return parent.suggestions();
+
+        if (suggestions.isEmpty()) {
+            findMatches(source, input, node).stream().flatMap(c -> c.getSuggestions(source).stream()).forEach(suggestions::add);
+        }
+
+        return suggestions;
     }
 
     @Override
