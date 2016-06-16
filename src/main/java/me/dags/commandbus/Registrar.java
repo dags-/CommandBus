@@ -30,6 +30,7 @@ import me.dags.commandbus.command.CommandNode;
 import me.dags.commandbus.command.CommandPath;
 import me.dags.commandbus.command.SpongeCommand;
 import org.spongepowered.api.Sponge;
+import org.spongepowered.api.command.args.ArgumentParseException;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -72,6 +73,7 @@ class Registrar {
     void submit(Object plugin) {
         roots.values().stream().map(SpongeCommand::new).forEach(c -> Sponge.getCommandManager().register(plugin, c, c.aliases()));
         commandBus.info("Registered {} main commands", roots.size());
+        roots.clear();
     }
 
     private CommandNode getRoot(String arg) {
@@ -82,14 +84,14 @@ class Registrar {
         return root;
     }
 
-    private CommandNode getParentTree(Command command) {
+    private CommandNode getParentTree(Command command) throws ArgumentParseException {
         if (command.parent().isEmpty()) {
             return getRoot(command.aliases()[0]);
         } else {
-            CommandPath args = new CommandPath(command.parent());
-            CommandNode node = getRoot(args.nextArg());
-            while (args.hasNext()) {
-                node = node.getOrCreateChild(args.nextArg());
+            CommandPath input = new CommandPath(command.parent());
+            CommandNode node = getRoot(input.currentState().next());
+            while (input.currentState().hasNext()) {
+                node = node.getOrCreateChild(input.currentState().next());
             }
             return node.getOrCreateChild(command.aliases()[0]);
         }

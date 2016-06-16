@@ -28,6 +28,7 @@ import org.spongepowered.api.command.args.CommandArgs;
 import org.spongepowered.api.command.args.parsing.SingleArg;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -36,53 +37,59 @@ import java.util.List;
 public class CommandPath {
 
     private final String raw;
-    private final String[] parts;
-    private int depth = 0;
+    private final List<SingleArg> singleArgs;
 
-    public CommandPath(String raw) {
-        this.raw = raw;
-        this.parts = raw.split(" ");
-    }
+    private CommandArgs commandArgs;
 
-    public boolean hasNext() {
-        return depth + 1 < parts.length;
-    }
-
-    public String currentArg() {
-        return hasNext() ? parts[depth] : lastArg();
-    }
-
-    public String nextArg() {
-        return parts[depth++];
-    }
-
-    public String lastArg() {
-        return depth > 0 ? parts[depth - 1] : parts[0];
-    }
-
-    public int length() {
-        return parts.length;
-    }
-
-    public int remaining() {
-        return parts.length - depth;
-    }
-
-    private int startPos(int toDepth) {
-        int start = 0;
-        for (int i = start; i < toDepth; i++) {
-            start += parts[i].length() + 1;
+    public CommandPath(String input) {
+        List<SingleArg> singleArgs = new ArrayList<>();
+        for (int pos = 0, start = pos; pos < input.length(); pos++, start = pos) {
+            while (pos < input.length() && input.charAt(pos) != ' ') {
+                pos++;
+            }
+            singleArgs.add(new SingleArg(input.substring(start, pos), start, pos));
         }
-        return start;
+        this.raw = input;
+        this.singleArgs = Collections.unmodifiableList(singleArgs);
+        this.commandArgs = new CommandArgs(raw, singleArgs);
     }
 
-    public CommandArgs remainingArgs() {
-        List<SingleArg> args = new ArrayList<>();
-        for (int i = depth; i < parts.length; i++) {
-            String part = parts[i];
-            int start = startPos(i), end = start + part.length();
-            args.add(new SingleArg(part, start, end));
-        }
-        return new CommandArgs(raw, args);
+    public CommandArgs currentState() {
+        return commandArgs;
+    }
+
+    CommandPath trim() {
+        commandArgs.nextIfPresent();
+        String trimmed = raw.substring(commandArgs.getRawPosition(), raw.length());
+        return new CommandPath(trimmed).jumpToEnd();
+    }
+
+    CommandArgs copyState() {
+        CommandArgs commandArgs = new CommandArgs(raw, singleArgs);
+        commandArgs.setState(this.commandArgs.getState());
+        return commandArgs;
+    }
+
+    int argIndex() {
+        return (int) commandArgs.getState();
+    }
+
+    int remaining() {
+        return singleArgs.size() - (argIndex() + 1);
+    }
+
+    void next() {
+        commandArgs.nextIfPresent();
+    }
+
+    private CommandPath jumpToEnd() {
+        int end = singleArgs.size() - 1;
+        commandArgs.setState(end);
+        return this;
+    }
+
+    @Override
+    public String toString() {
+        return raw;
     }
 }

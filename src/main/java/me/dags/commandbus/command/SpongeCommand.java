@@ -28,22 +28,16 @@ import org.spongepowered.api.command.CommandCallable;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
-import org.spongepowered.api.command.args.CommandArgs;
-import org.spongepowered.api.command.args.parsing.SingleArg;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
-import org.spongepowered.api.util.Tristate;
 
-import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * @author dags <dags@dags.me>
  */
 public class SpongeCommand implements CommandCallable {
 
-    private static final Text NO_PERM = Text.builder("You do not have permission to do that!").color(TextColors.RED).build();
     private static final Text NOT_FOUND = Text.builder("Command not recognised").color(TextColors.GRAY).build();
 
     private final CommandNode root;
@@ -56,9 +50,9 @@ public class SpongeCommand implements CommandCallable {
         return root.aliases();
     }
 
-    private List<CommandMethod.Instance> findMatches(CommandSource source, CommandInput input, CommandNode node) {
+    private List<CommandMethod.Instance> findMatches(CommandSource source, CommandPath input, CommandNode node) {
         List<CommandMethod.Instance> matchList = new ArrayList<>();
-        node.derp(source, input, matchList);
+        node.parse(source, input, matchList);
         if (matchList.size() > 1) {
             Collections.sort(matchList);
         }
@@ -67,17 +61,22 @@ public class SpongeCommand implements CommandCallable {
 
     @Override
     public CommandResult process(CommandSource source, String rawArgs) throws CommandException {
-        List<CommandMethod.Instance> commands = findMatches(source, new CommandInput(rawArgs), root);
-        for (CommandMethod.Instance instance : commands) {
-            Tristate result = instance.invoke(source);
-            if (result == Tristate.TRUE) {
-                return CommandResult.success();
-            } else if (result == Tristate.FALSE) {
-                source.sendMessage(NO_PERM);
-                return CommandResult.empty();
-            }
+        List<CommandMethod.Instance> commands = findMatches(source, new CommandPath(rawArgs), root);
+        if (commands.isEmpty()) {
+            source.sendMessage(NOT_FOUND);
+            return CommandResult.empty();
         }
-        source.sendMessage(NOT_FOUND);
+        InvokeResult result = InvokeResult.EMPTY;
+        for (CommandMethod.Instance instance : commands) {
+            InvokeResult test = instance.invoke(source);
+            if (test == InvokeResult.SUCCESS) {
+                return CommandResult.success();
+            }
+            result = result.or(test);
+        }
+        if (result != InvokeResult.EMPTY) {
+            source.sendMessage(result.info());
+        }
         return CommandResult.empty();
     }
 
@@ -85,7 +84,7 @@ public class SpongeCommand implements CommandCallable {
     public List<String> getSuggestions(CommandSource source, String arguments) throws CommandException {
         List<String> suggestions = new ArrayList<>();
 
-        CommandInput input = new CommandInput(arguments);
+        CommandPath input = new CommandPath(arguments);
         CommandNode node = root, previous = node;
         String lastArg = "";
 
@@ -96,7 +95,6 @@ public class SpongeCommand implements CommandCallable {
             }
             previous = node;
             input.currentState().next();
-            input.next();
         }
 
         if (node == null) {
@@ -105,7 +103,8 @@ public class SpongeCommand implements CommandCallable {
         }
 
         if (suggestions.isEmpty()) {
-            findMatches(source, input, node).stream().flatMap(c -> c.getSuggestions(source).stream()).forEach(suggestions::add);
+            input = input.trim();
+            node.completions(source, input).forEach(suggestions::add);
         }
 
         return suggestions;

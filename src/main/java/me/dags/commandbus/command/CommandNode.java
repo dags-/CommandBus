@@ -53,13 +53,11 @@ public class CommandNode {
     }
 
     public CommandNode getOrCreateChild(String alias) {
-        for (CommandNode node : children) {
-            if (node.matches(alias)) {
-                return node;
-            }
+        CommandNode node = getChild(alias);
+        if (node == null) {
+            node = new CommandNode(alias);
+            children.add(node);
         }
-        CommandNode node = new CommandNode(alias);
-        children.add(node);
         return node;
     }
 
@@ -72,19 +70,17 @@ public class CommandNode {
         return null;
     }
 
-    void derp(CommandSource source, CommandInput input, List<CommandMethod.Instance> list) {
+    void parse(CommandSource source, CommandPath input, List<CommandMethod.Instance> results) {
         for (CommandMethod method : this.methods) {
-            System.out.println("m: " + method.parameterCount() + " <> r:" + input.remaining());
-            if (method.parameterCount() == input.remaining() || (method.join() && method.parameterCount() >= input.remaining())) {
+            if (input.remaining() == method.parameterCount() || (method.join() && input.remaining() >= method.parameterCount())) {
                 try {
                     CommandArgs commandArgs = input.copyState();
                     CommandContext context = new CommandContext();
-                    method.parameters().parse(source, commandArgs, context);
-                    if (method.fitsContext(source, context)) {
-                        list.add(new CommandMethod.Instance(method, commandArgs, context));
+                    method.elements().parse(source, commandArgs, context);
+                    if (method.fitsContext(context)) {
+                        results.add(new CommandMethod.Instance(method, context));
                     }
                 } catch (ArgumentParseException ignored) {
-
                 }
             }
         }
@@ -92,50 +88,26 @@ public class CommandNode {
             try {
                 CommandNode child = getChild(input.currentState().next());
                 if (child != null) {
-                    System.out.println("Next: " + child.main);
-                    input.next();
-                    child.derp(source, input, list);
+                    child.parse(source, input, results);
                 }
             } catch (ArgumentParseException ignored) {
             }
         }
     }
 
-    void derp(CommandSource source, CommandArgs args, int length, List<CommandMethod.Instance> list) {
+    Collection<String> completions(CommandSource source, CommandPath input) {
+        Set<String> completions = new LinkedHashSet<>();
         for (CommandMethod method : this.methods) {
-            if (method.parameterCount() == length || (method.join() && method.parameterCount() >= length)) {
-                try {
-                    CommandContext context = new CommandContext();
-                    method.parameters().parse(source, args, context);
-                    if (method.fitsContext(source, context)) {
-                        list.add(new CommandMethod.Instance(method, args, context));
-                    }
-                } catch (ArgumentParseException ignored) {
-                    ignored.printStackTrace();
-                }
+            if (method.parameterCount() > input.argIndex()) {
+                CommandParameter parameter = method.parameter(input.argIndex());
+                completions.addAll(parameter.element().complete(source, input.currentState(), new CommandContext()));
             }
         }
-        if (args.hasNext()) {
-            try {
-                CommandNode child = getChild(args.next());
-                if (child != null) {
-                    child.derp(source, args, length - 1, list);
-                }
-            } catch (ArgumentParseException ignored) {
-            }
-        }
+        return completions;
     }
 
     List<String> aliases() {
         return new ArrayList<>(aliases);
-    }
-
-    List<String> suggestions() {
-        List<String> list = new ArrayList<>();
-        for (CommandNode child : this.children) {
-            list.addAll(child.aliases);
-        }
-        return list;
     }
 
     List<String> suggestions(String match) {
@@ -148,6 +120,12 @@ public class CommandNode {
             }
         }
         return list;
+    }
+
+    List<String> usage(CommandSource source) {
+        Set<String> set = new LinkedHashSet<>();
+        usage(source, "/" + main, set);
+        return set.stream().sorted().collect(Collectors.toList());
     }
 
     boolean testPermission(CommandSource source) {
@@ -164,10 +142,8 @@ public class CommandNode {
         return false;
     }
 
-    Collection<String> usage(CommandSource source) {
-        Set<String> set = new LinkedHashSet<>();
-        usage(source, "/" + main, set);
-        return set.stream().sorted().collect(Collectors.toList());
+    private boolean matches(String alias) {
+        return aliases.contains(alias);
     }
 
     private void usage(CommandSource source, String parent, Set<String> set) {
@@ -179,10 +155,6 @@ public class CommandNode {
         for (CommandNode child : children) {
             child.usage(source, parent + " " + child.main, set);
         }
-    }
-
-    private boolean matches(String alias) {
-        return aliases.contains(alias);
     }
 
     public void addCommandMethod(CommandMethod method) {
