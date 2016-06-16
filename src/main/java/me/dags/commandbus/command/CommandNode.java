@@ -53,13 +53,11 @@ public class CommandNode {
     }
 
     public CommandNode getOrCreateChild(String alias) {
-        for (CommandNode node : children) {
-            if (node.matches(alias)) {
-                return node;
-            }
+        CommandNode node = getChild(alias);
+        if (node == null) {
+            node = new CommandNode(alias);
+            children.add(node);
         }
-        CommandNode node = new CommandNode(alias);
-        children.add(node);
         return node;
     }
 
@@ -72,33 +70,44 @@ public class CommandNode {
         return null;
     }
 
-    void populate(CommandSource source, CommandPath path, List<CommandMethod.Instance> list) {
+    void parse(CommandSource source, CommandPath input, List<CommandMethod.Instance> results) {
         for (CommandMethod method : this.methods) {
-            if (path.remaining() == method.parameterCount() || (method.join() && path.remaining() > method.parameterCount())) {
-                CommandArgs args = path.remainingArgs();
-                CommandContext commandContext = new CommandContext();
+            if (input.remaining() == method.parameterCount() || (method.join() && input.remaining() >= method.parameterCount())) {
                 try {
-                    method.parameters().parse(source, args, commandContext);
-                } catch (ArgumentParseException e) {
-                    continue;
+                    CommandArgs commandArgs = input.copyState();
+                    CommandContext context = new CommandContext();
+                    method.elements().parse(source, commandArgs, context);
+                    if (method.fitsContext(context)) {
+                        results.add(new CommandMethod.Instance(method, context));
+                    }
+                } catch (ArgumentParseException ignored) {
                 }
-                if (method.fitsContext(commandContext)) {
-                    list.add(new CommandMethod.Instance(method, args, commandContext));
+            }
+        }
+        if (input.currentState().hasNext()) {
+            try {
+                CommandNode child = getChild(input.currentState().next());
+                if (child != null) {
+                    child.parse(source, input, results);
                 }
+            } catch (ArgumentParseException ignored) {
             }
         }
     }
 
-    List<String> aliases() {
-        return new ArrayList<>(aliases);
+    Collection<String> completions(CommandSource source, CommandPath input) {
+        Set<String> completions = new LinkedHashSet<>();
+        for (CommandMethod method : this.methods) {
+            if (method.parameterCount() > input.argIndex()) {
+                CommandParameter parameter = method.parameter(input.argIndex());
+                completions.addAll(parameter.element().complete(source, input.currentState(), new CommandContext()));
+            }
+        }
+        return completions;
     }
 
-    List<String> suggestions() {
-        List<String> list = new ArrayList<>();
-        for (CommandNode child : this.children) {
-            list.addAll(child.aliases);
-        }
-        return list;
+    List<String> aliases() {
+        return new ArrayList<>(aliases);
     }
 
     List<String> suggestions(String match) {
@@ -111,6 +120,12 @@ public class CommandNode {
             }
         }
         return list;
+    }
+
+    List<String> usage(CommandSource source) {
+        Set<String> set = new LinkedHashSet<>();
+        usage(source, "/" + main, set);
+        return set.stream().sorted().collect(Collectors.toList());
     }
 
     boolean testPermission(CommandSource source) {
@@ -127,10 +142,8 @@ public class CommandNode {
         return false;
     }
 
-    Collection<String> usage(CommandSource source) {
-        Set<String> set = new LinkedHashSet<>();
-        usage(source, "/" + main, set);
-        return set.stream().sorted().collect(Collectors.toList());
+    private boolean matches(String alias) {
+        return aliases.contains(alias);
     }
 
     private void usage(CommandSource source, String parent, Set<String> set) {
@@ -142,10 +155,6 @@ public class CommandNode {
         for (CommandNode child : children) {
             child.usage(source, parent + " " + child.main, set);
         }
-    }
-
-    private boolean matches(String alias) {
-        return aliases.contains(alias);
     }
 
     public void addCommandMethod(CommandMethod method) {

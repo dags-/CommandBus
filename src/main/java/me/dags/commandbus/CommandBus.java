@@ -70,7 +70,7 @@ public final class CommandBus {
      * default constructor.
      *
      * @param classes The class(es) to register.
-     * @return The current CommandBus instance (for chaining).
+     * @return The currentState CommandBus instance (for chaining).
      */
     public CommandBus register(Class<?>... classes) {
         for (Class<?> c : classes) {
@@ -97,7 +97,7 @@ public final class CommandBus {
      * This method also searches through an object's super class heirarchy.
      *
      * @param objects The object(s) to register.
-     * @return The current CommandBus instance (for chaining).
+     * @return The currentState CommandBus instance (for chaining).
      */
     public CommandBus register(Object... objects) {
         for (Object o : objects) {

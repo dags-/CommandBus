@@ -26,7 +26,6 @@ package me.dags.commandbus.command;
 
 import me.dags.commandbus.annotation.Command;
 import org.spongepowered.api.command.CommandSource;
-import org.spongepowered.api.command.args.CommandArgs;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.GenericArguments;
@@ -34,8 +33,6 @@ import org.spongepowered.api.util.Tristate;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -73,6 +70,12 @@ public class CommandMethod {
         return command;
     }
 
+    @Override
+    public String toString() {
+        String command = command().aliases()[0] + " " + usage();
+        return command().parent().isEmpty() ? command : command().parent() + " " + command;
+    }
+
     boolean join() {
         return join;
     }
@@ -81,7 +84,14 @@ public class CommandMethod {
         return argCount;
     }
 
-    CommandElement parameters() {
+    CommandParameter parameter(int index) {
+        if (argCount < parameters.length) {
+            index += 1;
+        }
+        return parameters[index];
+    }
+
+    CommandElement elements() {
         return element;
     }
 
@@ -108,6 +118,24 @@ public class CommandMethod {
             }
         }
         return true;
+    }
+
+    boolean fitsCaller(CommandSource source) {
+        for (CommandParameter parameter : parameters) {
+            if (parameter.caller() && !parameter.type().isInstance(source)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    String callerType() {
+        for (CommandParameter parameter : parameters) {
+            if (parameter.caller()) {
+                return parameter.type().getSimpleName();
+            }
+        }
+        return "?";
     }
 
     void invoke(CommandSource source, CommandContext context) throws Exception {
@@ -162,30 +190,26 @@ public class CommandMethod {
     static class Instance implements Comparable<Instance> {
 
         private final CommandMethod method;
-        private final CommandArgs commandArgs;
         private final CommandContext commandContext;
 
-        Instance(CommandMethod method, CommandArgs commandArgs, CommandContext commandContext) {
+        Instance(CommandMethod method, CommandContext commandContext) {
             this.method = method;
-            this.commandArgs = commandArgs;
             this.commandContext = commandContext;
         }
 
-        List<String> getSuggestions(CommandSource source) {
-            commandArgs.setState(-1);
-            return method.parameters().complete(source, commandArgs, commandContext);
-        }
-
-        Tristate invoke(CommandSource source) {
+        InvokeResult invoke(CommandSource source) {
+            if (!method.fitsCaller(source)) {
+                return InvokeResult.of(Tristate.FALSE, "You must be a " + method.callerType() + " to use this command");
+            }
             if (!method.command().perm().isEmpty() && !source.hasPermission(method.command().perm())) {
-                return Tristate.FALSE;
+                return InvokeResult.NO_PERM;
             }
             try {
                 method.invoke(source, commandContext);
-                return Tristate.TRUE;
+                return InvokeResult.SUCCESS;
             } catch (Exception e) {
                 e.printStackTrace();
-                return Tristate.UNDEFINED;
+                return InvokeResult.UNKNOWN;
             }
         }
 

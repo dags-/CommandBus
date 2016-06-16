@@ -30,7 +30,6 @@ import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
-import org.spongepowered.api.util.Tristate;
 
 import java.util.*;
 
@@ -39,7 +38,6 @@ import java.util.*;
  */
 public class SpongeCommand implements CommandCallable {
 
-    private static final Text NO_PERM = Text.builder("You do not have permission to do that!").color(TextColors.RED).build();
     private static final Text NOT_FOUND = Text.builder("Command not recognised").color(TextColors.GRAY).build();
 
     private final CommandNode root;
@@ -52,63 +50,64 @@ public class SpongeCommand implements CommandCallable {
         return root.aliases();
     }
 
-    private List<CommandMethod.Instance> findMatches(CommandSource source, String rawArgs) {
-        CommandNode parent = root;
-        CommandPath args = new CommandPath(rawArgs);
-        List<CommandMethod.Instance> matches = new ArrayList<>();
-        while (args.hasNext() && parent != null) {
-            parent.populate(source, args, matches);
-            parent = parent.getChild(args.nextArg());
+    private List<CommandMethod.Instance> findMatches(CommandSource source, CommandPath input, CommandNode node) {
+        List<CommandMethod.Instance> matchList = new ArrayList<>();
+        node.parse(source, input, matchList);
+        if (matchList.size() > 1) {
+            Collections.sort(matchList);
         }
-        if (parent != null) {
-            parent.populate(source, args, matches);
-        }
-        if (matches.size() > 1) {
-            Collections.sort(matches);
-        }
-        return matches;
+        return matchList;
     }
 
     @Override
     public CommandResult process(CommandSource source, String rawArgs) throws CommandException {
-        List<CommandMethod.Instance> commands = findMatches(source, rawArgs);
-        for (CommandMethod.Instance instance : commands) {
-            Tristate result = instance.invoke(source);
-            if (result == Tristate.TRUE) {
-                return CommandResult.success();
-            } else if (result == Tristate.FALSE) {
-                source.sendMessage(NO_PERM);
-                return CommandResult.empty();
-            }
+        List<CommandMethod.Instance> commands = findMatches(source, new CommandPath(rawArgs), root);
+        if (commands.isEmpty()) {
+            source.sendMessage(NOT_FOUND);
+            return CommandResult.empty();
         }
-        source.sendMessage(NOT_FOUND);
+        InvokeResult result = InvokeResult.EMPTY;
+        for (CommandMethod.Instance instance : commands) {
+            InvokeResult test = instance.invoke(source);
+            if (test == InvokeResult.SUCCESS) {
+                return CommandResult.success();
+            }
+            result = result.or(test);
+        }
+        if (result != InvokeResult.EMPTY) {
+            source.sendMessage(result.info());
+        }
         return CommandResult.empty();
     }
 
     @Override
     public List<String> getSuggestions(CommandSource source, String arguments) throws CommandException {
-        CommandPath args = new CommandPath(arguments);
-        CommandNode parent = root, previous = parent;
-        while (args.hasNext()) {
-            previous = parent;
-            parent = parent.getChild(args.currentArg());
-            if (parent == null) {
+        List<String> suggestions = new ArrayList<>();
+
+        CommandPath input = new CommandPath(arguments);
+        CommandNode node = root, previous = node;
+        String lastArg = "";
+
+        while (input.currentState().hasNext()) {
+            node = node.getChild(lastArg = input.currentState().peek());
+            if (node == null) {
                 break;
             }
-            args.nextArg();
+            previous = node;
+            input.currentState().next();
         }
-        if (parent == null) {
-            parent = previous;
-            List<String> partial = parent.suggestions(args.currentArg());
-            if (partial.size() == 0) {
-                List<CommandMethod.Instance> commands = findMatches(source, arguments);
-                for (CommandMethod.Instance command: commands) {
-                    partial.addAll(command.getSuggestions(source));
-                }
-            }
-            return partial;
+
+        if (node == null) {
+            node = previous;
+            suggestions.addAll(node.suggestions(lastArg));
         }
-        return parent.suggestions();
+
+        if (suggestions.isEmpty()) {
+            input = input.trim();
+            node.completions(source, input).forEach(suggestions::add);
+        }
+
+        return suggestions;
     }
 
     @Override
