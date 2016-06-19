@@ -71,11 +71,11 @@ public class CommandPath {
     }
 
     int argIndex() {
-        return (int) commandArgs.getState();
+        return (int) commandArgs.getState() + 1;
     }
 
     int remaining() {
-        return singleArgs.size() - (argIndex() + 1);
+        return singleArgs.size() - (argIndex());
     }
 
     void next() {
@@ -83,8 +83,8 @@ public class CommandPath {
     }
 
     private CommandPath jumpToEnd() {
-        int end = singleArgs.size() - 1;
-        commandArgs.setState(end);
+        int end = singleArgs.size() - 2;
+        currentState().setState(end);
         return this;
     }
 

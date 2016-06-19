@@ -85,7 +85,7 @@ public class CommandMethod {
     }
 
     CommandParameter parameter(int index) {
-        if (argCount < parameters.length) {
+        if (parameterCount() < parameters.length) {
             index += 1;
         }
         return parameters[index];

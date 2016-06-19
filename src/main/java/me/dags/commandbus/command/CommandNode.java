@@ -28,6 +28,7 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.ArgumentParseException;
 import org.spongepowered.api.command.args.CommandArgs;
 import org.spongepowered.api.command.args.CommandContext;
+import org.spongepowered.api.command.args.GenericArguments;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -100,7 +101,7 @@ public class CommandNode {
         for (CommandMethod method : this.methods) {
             if (method.parameterCount() > input.argIndex()) {
                 CommandParameter parameter = method.parameter(input.argIndex());
-                completions.addAll(parameter.element().complete(source, input.currentState(), new CommandContext()));
+                completions.addAll(parameter.element().complete(source, input.copyState(), new CommandContext()));
             }
         }
         return completions;
