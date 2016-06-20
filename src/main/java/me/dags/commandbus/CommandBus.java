@@ -25,11 +25,15 @@
 package me.dags.commandbus;
 
 import me.dags.commandbus.exception.CommandRegistrationException;
+import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.objectmapping.ObjectMappingException;
+import ninja.leaping.configurate.objectmapping.serialize.TypeSerializers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.plugin.PluginContainer;
 
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -44,6 +48,10 @@ import java.util.Optional;
  * should be registered through the same CommandBus instance, before being submitted.
  */
 public final class CommandBus {
+
+    static {
+        TypeSerializers.getDefaultSerializers().registerType(Format.TYPE_TOKEN, Format.TYPE_ADAPTER);
+    }
 
     private final Registrar registrar = new Registrar(this);
     private final boolean logging;
@@ -174,5 +182,55 @@ public final class CommandBus {
      */
     public static CommandBus newSilentInstance() {
         return new CommandBus(false);
+    }
+
+    /**
+     * Get a new Format.Builder instance.
+     *
+     * @return the new Format.Builder instance.
+     */
+    public static Format.Builder newFormatBuilder() {
+        return Format.builder();
+    }
+
+    /**
+     * Get a Format from the provided Map of properties.
+     *
+     * @param formatMap the Map of properties to construct the Format from.
+     * @return the new Format instance.
+     */
+    public static Format getFormatter(Map<Object, Object> formatMap) {
+        return Format.fromMap(formatMap);
+    }
+
+    /**
+     * Get a Format from the provided ConfigurationNode.
+     * If absent, inserts a new Format into the node and returns it.
+     *
+     * @param node the ConfigurationNode holding the Format.
+     * @return the Format.
+     * @throws ObjectMappingException
+     */
+    public static Format getFormatter(ConfigurationNode node) throws ObjectMappingException {
+        if (!node.hasMapChildren()) {
+            return Format.builder().build().setNode(node);
+        }
+        return node.getValue(Format.TYPE_TOKEN);
+    }
+
+    /**
+     * Get a Format from the provided ConfigurationNode.
+     * If absent, inserts the provided default Format into the node and returns it.
+     *
+     * @param node the ConfigurationNode holding the Format.
+     * @param defaultFormat the default Format to use if there is not one present in the node.
+     * @return the Format.
+     * @throws ObjectMappingException
+     */
+    public static Format getFormatter(ConfigurationNode node, Format defaultFormat) throws ObjectMappingException {
+        if (!node.hasMapChildren()) {
+            return defaultFormat.setNode(node);
+        }
+        return node.getValue(Format.TYPE_TOKEN);
     }
 }
