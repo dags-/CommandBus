@@ -25,6 +25,7 @@
 package me.dags.commandbus;
 
 import me.dags.commandbus.exception.CommandRegistrationException;
+import me.dags.commandbus.utils.Format;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import ninja.leaping.configurate.objectmapping.serialize.TypeSerializers;

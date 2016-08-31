@@ -22,7 +22,7 @@
  * THE SOFTWARE.
  */
 
-package me.dags.commandbus;
+package me.dags.commandbus.utils;
 
 import com.google.common.reflect.TypeToken;
 import ninja.leaping.configurate.ConfigurationNode;
@@ -44,6 +44,7 @@ public class Format {
 
     public static final TypeToken<Format> TYPE_TOKEN = TypeToken.of(Format.class);
     public static final Format.Adapter TYPE_ADAPTER = new Format.Adapter();
+    static final Format DEFAULT = Format.builder().build();
 
     private static final String INFO = "info";
     private static final String SUBDUED = "subdued";
@@ -131,7 +132,7 @@ public class Format {
         return new MessageBuilder();
     }
 
-    static Builder builder() {
+    public static Builder builder() {
         return new Builder();
     }
 
@@ -269,7 +270,7 @@ public class Format {
         }
     }
 
-    static class Adapter implements TypeSerializer<Format> {
+    public static class Adapter implements TypeSerializer<Format> {
 
         private Adapter(){}
 
