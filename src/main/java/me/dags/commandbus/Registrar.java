@@ -25,15 +25,21 @@
 package me.dags.commandbus;
 
 import me.dags.commandbus.annotation.Command;
+import me.dags.commandbus.annotation.Permission;
 import me.dags.commandbus.command.CommandMethod;
 import me.dags.commandbus.command.CommandNode;
 import me.dags.commandbus.command.CommandPath;
 import me.dags.commandbus.command.SpongeCommand;
 import org.spongepowered.api.Sponge;
+import org.spongepowered.api.command.CommandManager;
 import org.spongepowered.api.command.args.ArgumentParseException;
+import org.spongepowered.api.service.permission.PermissionService;
+import org.spongepowered.api.text.Text;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -42,7 +48,9 @@ import java.util.Map;
 class Registrar {
 
     private final Map<String, CommandNode> roots = new HashMap<>();
+    private final List<Permission> permissions = new ArrayList<>();
     private final CommandBus commandBus;
+    private boolean submitted = false;
 
     Registrar(CommandBus commandBus) {
         this.commandBus = commandBus;
@@ -55,10 +63,11 @@ class Registrar {
             for (Method method : c.getDeclaredMethods()) {
                 if (method.isAnnotationPresent(Command.class)) {
                     try {
-                        CommandMethod commandMethod = new CommandMethod(object, method);
+                        CommandMethod commandMethod = new CommandMethod(commandBus.getParameterTypes(), object, method);
                         CommandNode commandNode = getParentTree(commandMethod.command());
                         commandNode.addAliases(commandMethod.command().aliases());
                         commandNode.addCommandMethod(commandMethod);
+                        permissions.add(commandMethod.permission());
                         count++;
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -71,9 +80,37 @@ class Registrar {
     }
 
     void submit(Object plugin) {
-        roots.values().stream().map(SpongeCommand::new).forEach(c -> Sponge.getCommandManager().register(plugin, c, c.aliases()));
+        if (submitted) {
+            throw new UnsupportedOperationException("Cannot submit commands more than once");
+        }
+
+        CommandManager commandManager = Sponge.getCommandManager();
+        roots.values().stream().map(n -> new SpongeCommand(n, commandBus.getFormat())).forEach(c -> commandManager.register(plugin, c, c.aliases()));
+
+        PermissionService permissionService = Sponge.getServiceManager().provideUnchecked(PermissionService.class);
+        permissions.stream()
+                .filter(permission -> !permission.id().isEmpty())
+                .forEach(permission -> permissionService.newDescriptionBuilder(plugin)
+                        .ifPresent(builder -> {
+                            builder.id(permission.id());
+                            if (!permission.description().isEmpty()) {
+                                builder.description(Text.of(permission.description()));
+                            }
+                            if (!permission.assign().role().isEmpty()) {
+                                builder.assign(permission.assign().role(), permission.assign().value());
+                            }
+                            builder.register();
+                        })
+                );
+
+
         commandBus.info("Registered {} main commands", roots.size());
+        commandBus.info("Registered {} permissions", permissions.size());
+
         roots.clear();
+        permissions.clear();
+
+        submitted = true;
     }
 
     private CommandNode getRoot(String arg) {

@@ -27,14 +27,11 @@ package me.dags.commandbus.utils;
 import com.google.common.reflect.TypeToken;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
-import ninja.leaping.configurate.objectmapping.serialize.TypeSerializer;
-import org.spongepowered.api.Sponge;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.channel.MessageChannel;
 import org.spongepowered.api.text.channel.MessageReceiver;
 import org.spongepowered.api.text.format.*;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -43,8 +40,7 @@ import java.util.Map;
 public class Format {
 
     public static final TypeToken<Format> TYPE_TOKEN = TypeToken.of(Format.class);
-    public static final Format.Adapter TYPE_ADAPTER = new Format.Adapter();
-    static final Format DEFAULT = Format.builder().build();
+    public static final Format DEFAULT = Format.builder().build();
 
     private static final String INFO = "info";
     private static final String SUBDUED = "subdued";
@@ -52,11 +48,11 @@ public class Format {
     private static final String ERROR = "error";
     private static final String WARN = "warn";
 
-    private final TextFormat info;
-    private final TextFormat subdued;
-    private final TextFormat stress;
-    private final TextFormat error;
-    private final TextFormat warn;
+    final TextFormat info;
+    final TextFormat subdued;
+    final TextFormat stress;
+    final TextFormat error;
+    final TextFormat warn;
 
     private Format(Builder builder) {
         this.info = builder.info;
@@ -76,24 +72,24 @@ public class Format {
         return this;
     }
 
-    public MessageBuilder info(Object input) {
-        return message().info(input);
+    public MessageBuilder info(Object input, Object... args) {
+        return message().info(input, args);
     }
 
-    public MessageBuilder subdued(Object input) {
-        return message().subdued(input);
+    public MessageBuilder subdued(Object input, Object... args) {
+        return message().subdued(input, args);
     }
 
-    public MessageBuilder stress(Object input) {
-        return message().stress(input);
+    public MessageBuilder stress(Object input, Object... args) {
+        return message().stress(input, args);
     }
 
-    public MessageBuilder error(Object input) {
-        return message().error(input);
+    public MessageBuilder error(Object input, Object... args) {
+        return message().error(input, args);
     }
 
-    public MessageBuilder warn(Object input) {
-        return message().warn(input);
+    public MessageBuilder warn(Object input, Object... args) {
+        return message().warn(input, args);
     }
 
     public MessageBuilder text(Text text) {
@@ -125,7 +121,7 @@ public class Format {
     }
 
     public Map<Object, Object> toMap() {
-        return Format.toMap(this);
+        return FormatSerializer.toMap(this);
     }
 
     public MessageBuilder message() {
@@ -136,32 +132,63 @@ public class Format {
         return new Builder();
     }
 
+    public static Format fromNode(ConfigurationNode node) throws ObjectMappingException {
+        if (!node.hasMapChildren()) {
+            return Format.builder().build().setNode(node);
+        }
+        return node.getValue(Format.TYPE_TOKEN);
+    }
+
+    public static Format fromMap(Map<Object, Object> map) {
+        return FormatSerializer.fromMap(map);
+    }
+
     public class MessageBuilder {
 
         private final Text.Builder builder = Text.builder();
 
-        public MessageBuilder info(Object input) {
-            builder.append(Format.this.infoText(input.toString()));
+        public MessageBuilder info(Object input, Object... args) {
+            if (args.length > 0) {
+                builder.append(Format.this.infoText(StringUtils.format(input.toString(), args)));
+            } else {
+                builder.append(Format.this.infoText(input.toString()));
+            }
             return this;
         }
 
-        public MessageBuilder subdued(Object input) {
-            builder.append(Format.this.subduedText(input.toString()));
+        public MessageBuilder subdued(Object input, Object... args) {
+            if (args.length > 0) {
+                builder.append(Format.this.subduedText(StringUtils.format(input.toString(), args)));
+            } else {
+                builder.append(Format.this.subduedText(input.toString()));
+            }
             return this;
         }
 
-        public MessageBuilder stress(Object input) {
-            builder.append(Format.this.stressText(input.toString()));
+        public MessageBuilder stress(Object input, Object... args) {
+            if (args.length > 0) {
+                builder.append(Format.this.stressText(StringUtils.format(input.toString(), args)));
+            } else {
+                builder.append(Format.this.stressText(input.toString()));
+            }
             return this;
         }
 
-        public MessageBuilder error(Object input) {
-            builder.append(Format.this.errorText(input.toString()));
+        public MessageBuilder error(Object input, Object... args) {
+            if (args.length > 0) {
+                builder.append(Format.this.errorText(StringUtils.format(input.toString(), args)));
+            } else {
+                builder.append(Format.this.errorText(input.toString()));
+            }
             return this;
         }
 
-        public MessageBuilder warn(Object input) {
-            builder.append(Format.this.warnText(input.toString()));
+        public MessageBuilder warn(Object input, Object... args) {
+            if (args.length > 0) {
+                builder.append(Format.this.warnText(StringUtils.format(input.toString(), args)));
+            } else {
+                builder.append(Format.this.warnText(input.toString()));
+            }
             return this;
         }
 
@@ -194,9 +221,9 @@ public class Format {
 
     public static class Builder {
 
-        TextFormat info = TextFormat.of(TextColors.DARK_AQUA);
-        TextFormat subdued = TextFormat.of(TextColors.GRAY);
-        TextFormat stress = TextFormat.of(TextColors.DARK_PURPLE);
+        TextFormat info = TextFormat.of(TextColors.WHITE);
+        TextFormat subdued = TextFormat.of(TextStyles.ITALIC);
+        TextFormat stress = TextFormat.of(TextColors.GREEN);
         TextFormat error = TextFormat.of(TextColors.GRAY);
         TextFormat warn = TextFormat.of(TextColors.RED);
 
@@ -268,114 +295,5 @@ public class Format {
         public Format build() {
             return new Format(this);
         }
-    }
-
-    public static class Adapter implements TypeSerializer<Format> {
-
-        private Adapter(){}
-
-        @Override
-        public Format deserialize(TypeToken<?> type, ConfigurationNode value) throws ObjectMappingException {
-            Format.Builder formatter = Format.builder();
-            formatter.info(getFormat(value.getNode(INFO)));
-            formatter.subdued(getFormat(value.getNode(SUBDUED)));
-            formatter.stress(getFormat(value.getNode(STRESS)));
-            formatter.error(getFormat(value.getNode(ERROR)));
-            formatter.warn(getFormat(value.getNode(WARN)));
-            return formatter.build();
-        }
-
-        @Override
-        public void serialize(TypeToken<?> type, Format format, ConfigurationNode value) throws ObjectMappingException {
-            setFormat(format.info, value.getNode(INFO));
-            setFormat(format.subdued, value.getNode(SUBDUED));
-            setFormat(format.stress, value.getNode(STRESS));
-            setFormat(format.error, value.getNode(ERROR));
-            setFormat(format.warn, value.getNode(WARN));
-        }
-
-        private static TextFormat getFormat(ConfigurationNode node) {
-            if (node.isVirtual()) {
-                return TextFormat.NONE;
-            }
-            String color = node.getNode("color").getString("");
-            boolean bold = node.getNode("bold").getBoolean(false);
-            boolean italic = node.getNode("italic").getBoolean(false);
-            boolean obfuscated = node.getNode("obfuscated").getBoolean(false);
-            boolean strikethrough = node.getNode("strikethrough").getBoolean(false);
-            boolean underline = node.getNode("underline").getBoolean(false);
-            TextColor textColor = Sponge.getRegistry().getType(TextColor.class, color).orElse(TextColors.NONE);
-            TextStyle style = TextStyles.of().bold(bold).italic(italic).obfuscated(obfuscated).strikethrough(strikethrough).underline(underline);
-            return TextFormat.of(textColor, style);
-        }
-
-        private static void setFormat(TextFormat format, ConfigurationNode node) {
-            if (format.getColor() != TextColors.NONE) {
-                node.getNode("color").setValue(format.getColor().getName());
-            }
-            System.out.println(format.getStyle().isBold());
-            System.out.println(format.getStyle().isItalic());
-            System.out.println(format.getStyle().hasStrikethrough());
-            System.out.println(format.getStyle().hasUnderline());
-
-            format.getStyle().isBold().ifPresent(node.getNode("bold")::setValue);
-            format.getStyle().isItalic().ifPresent(node.getNode("italic")::setValue);
-            format.getStyle().isObfuscated().ifPresent(node.getNode("obfuscated")::setValue);
-            format.getStyle().hasStrikethrough().ifPresent(node.getNode("strikethrough")::setValue);
-            format.getStyle().hasUnderline().ifPresent(node.getNode("underline")::setValue);
-        }
-    }
-
-    public static Map<Object, Object> toMap(Format format) {
-        Map<Object, Object> map = new LinkedHashMap<>();
-        map.put(INFO, toMap(format.info));
-        map.put(SUBDUED, toMap(format.subdued));
-        map.put(STRESS, toMap(format.stress));
-        map.put(ERROR, toMap(format.error));
-        map.put(WARN, toMap(format.warn));
-        return map;
-    }
-
-    public static Format fromMap(Map<Object, Object> map) {
-        Format.Builder formatter = Format.builder();
-        formatter.info(fromObject(map.get(INFO)));
-        formatter.subdued(fromObject(map.get(SUBDUED)));
-        formatter.stress(fromObject(map.get(STRESS)));
-        formatter.error(fromObject(map.get(ERROR)));
-        formatter.warn(fromObject(map.get(WARN)));
-        return formatter.build();
-    }
-
-    private static Map<Object, Object> toMap(TextFormat format) {
-        Map<Object, Object> map = new LinkedHashMap<>();
-        if (format.getColor() != TextColors.NONE) {
-            map.put("color", format.getColor());
-        }
-        format.getStyle().isBold().ifPresent(b -> map.put("bold", b));
-        format.getStyle().isItalic().ifPresent(b -> map.put("italic", b));
-        format.getStyle().isObfuscated().ifPresent(b -> map.put("bold", b));
-        format.getStyle().hasStrikethrough().ifPresent(b -> map.put("strikethrough", b));
-        format.getStyle().hasUnderline().ifPresent(b -> map.put("underline", b));
-        return map;
-    }
-
-    private static TextFormat fromObject(Object object) {
-        if (object == null || !(object instanceof Map)) {
-            return TextFormat.NONE;
-        }
-        Map map = (Map) object;
-        String color = notNull((String) map.get("color"), "");
-        Boolean bold = notNull((Boolean) map.get("bold"), false);
-        Boolean italic = notNull((Boolean) map.get("italic"), false);
-        Boolean obfuscated = notNull((Boolean) map.get("obfuscated"), false);
-        Boolean strikethrough = notNull((Boolean) map.get("strikethrough"), false);
-        Boolean underline = notNull((Boolean) map.get("underline"), false);
-        TextColor textColor = Sponge.getRegistry().getType(TextColor.class, color).orElse(TextColors.NONE);
-        TextStyle style = TextStyles.of().bold(bold).italic(italic).obfuscated(obfuscated).strikethrough(strikethrough).underline(underline);
-        return TextFormat.of(textColor, style);
-    }
-
-    private static <T> T notNull(T in, T def) {
-        return in != null ? in : def;
     }
 }

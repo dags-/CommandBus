@@ -25,6 +25,7 @@
 package me.dags.commandbus.command;
 
 import me.dags.commandbus.annotation.Command;
+import me.dags.commandbus.annotation.Permission;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
@@ -41,6 +42,7 @@ import java.util.Optional;
 public class CommandMethod {
 
     private final Command command;
+    private final Permission permission;
     private final Object owner;
     private final Method target;
     private final CommandElement element;
@@ -49,11 +51,12 @@ public class CommandMethod {
     private final boolean join;
     private final int argCount;
 
-    public CommandMethod(Object owner, Method target) {
+    public CommandMethod(ParameterTypes types, Object owner, Method target) {
         this.command = target.getDeclaredAnnotation(Command.class);
+        this.permission = command.perm();
         this.owner = owner;
         this.target = target;
-        this.parameters = getParameters(target);
+        this.parameters = getParameters(types, target);
         CommandElement[] elements = toElements(parameters);
         this.element = elements.length == 0 ? GenericArguments.none() : GenericArguments.seq(elements);
         this.argCount = elements.length;
@@ -68,6 +71,10 @@ public class CommandMethod {
 
     public Command command() {
         return command;
+    }
+
+    public Permission permission() {
+        return permission;
     }
 
     @Override
@@ -160,11 +167,11 @@ public class CommandMethod {
         target.invoke(owner, args);
     }
 
-    private static CommandParameter[] getParameters(Method method) {
+    private static CommandParameter[] getParameters(ParameterTypes parameterTypes, Method method) {
         Parameter[] parameters = method.getParameters();
         CommandParameter[] commandParameters = new CommandParameter[parameters.length];
         for (int i = 0; i < parameters.length; i++) {
-            commandParameters[i] = new CommandParameter(parameters[i], "#" + i);
+            commandParameters[i] = new CommandParameter(parameterTypes, parameters[i], "#" + i);
         }
         return commandParameters;
     }
@@ -201,7 +208,7 @@ public class CommandMethod {
             if (!method.fitsCaller(source)) {
                 return InvokeResult.of(Tristate.FALSE, "You must be a " + method.callerType() + " to use this command");
             }
-            if (!method.command().perm().isEmpty() && !source.hasPermission(method.command().perm())) {
+            if (!method.permission.id().isEmpty() && !source.hasPermission(method.permission.id())) {
                 return InvokeResult.NO_PERM;
             }
             try {

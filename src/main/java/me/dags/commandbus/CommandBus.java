@@ -24,18 +24,22 @@
 
 package me.dags.commandbus;
 
+import me.dags.commandbus.command.ParameterTypes;
 import me.dags.commandbus.exception.CommandRegistrationException;
 import me.dags.commandbus.utils.Format;
-import ninja.leaping.configurate.ConfigurationNode;
-import ninja.leaping.configurate.objectmapping.ObjectMappingException;
+import me.dags.commandbus.utils.FormatSerializer;
 import ninja.leaping.configurate.objectmapping.serialize.TypeSerializers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.api.Sponge;
+import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.plugin.PluginContainer;
+import org.spongepowered.api.text.Text;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 /**
  * @author dags <dags@dags.me>
@@ -51,25 +55,20 @@ import java.util.Optional;
 public final class CommandBus {
 
     static {
-        TypeSerializers.getDefaultSerializers().registerType(Format.TYPE_TOKEN, Format.TYPE_ADAPTER);
+        TypeSerializers.getDefaultSerializers().registerType(Format.TYPE_TOKEN, FormatSerializer.INSTANCE);
     }
 
     private final Registrar registrar = new Registrar(this);
+    private final ParameterTypes parameterTypes;
     private final boolean logging;
     private final Logger logger;
+    private final Format format;
 
-    private CommandBus() {
-        this(true);
-    }
-
-    private CommandBus(boolean logging) {
-        this.logging = logging;
-        this.logger = LoggerFactory.getLogger(CommandBus.class);
-    }
-
-    private CommandBus(Logger logger) {
-        this.logging = true;
-        this.logger = logger;
+    private CommandBus(Builder builder) {
+        this.logger = builder.logger;
+        this.logging = builder.logging;
+        this.format = builder.format;
+        this.parameterTypes = new ParameterTypes(builder.types);
     }
 
     /**
@@ -79,7 +78,7 @@ public final class CommandBus {
      * default constructor.
      *
      * @param classes The class(es) to register.
-     * @return The currentState CommandBus instance (for chaining).
+     * @return The current CommandBus instance (for chaining).
      */
     public CommandBus register(Class<?>... classes) {
         for (Class<?> c : classes) {
@@ -106,7 +105,7 @@ public final class CommandBus {
      * This method also searches through an object's super class heirarchy.
      *
      * @param objects The object(s) to register.
-     * @return The currentState CommandBus instance (for chaining).
+     * @return The current CommandBus instance (for chaining).
      */
     public CommandBus register(Object... objects) {
         for (Object o : objects) {
@@ -136,102 +135,67 @@ public final class CommandBus {
         registrar.submit(plugin);
     }
 
-    protected void info(String message, Object... args) {
+    void info(String message, Object... args) {
         if (logging) {
             logger.info(message, args);
         }
     }
 
-    protected void warn(String message, Object... args) {
+    void warn(String message, Object... args) {
         if (logging) {
             logger.warn(message, args);
         }
     }
 
-    protected void error(String message, Object... args) {
+    void error(String message, Object... args) {
         if (logging) {
             logger.error(message, args);
         }
     }
 
-    /**
-     * Get a new default CommandBus instance.
-     *
-     * @return The newly created CommandBus instance using the default logger.
-     */
-    public static CommandBus newInstance() {
-        return new CommandBus();
+    ParameterTypes getParameterTypes() {
+        return parameterTypes;
     }
 
-    /**
-     * Get a new CommandBus instance using the provided logger.
-     *
-     * @param logger The logger this new CommandBus should use
-     * @return The newly created CommandBus using the provided logger.
-     */
-    public static CommandBus newInstance(Logger logger) {
-        if (logger == null) {
-            return newInstance();
+    Format getFormat() {
+        return format;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+
+        private Map<Class<?>, Function<Text, CommandElement>> types = new HashMap<>();
+        private Logger logger = LoggerFactory.getLogger(CommandBus.class.getSimpleName());
+        private Format format = Format.DEFAULT;
+        private boolean logging = true;
+
+        public Builder logging(boolean logging) {
+            this.logging = logging;
+            return this;
         }
-        return new CommandBus(logger);
-    }
 
-    /**
-     * Get a new CommandBus instance with logging disabled.
-     *
-     * @return The newly created CommandBus with logging disabled.
-     */
-    public static CommandBus newSilentInstance() {
-        return new CommandBus(false);
-    }
-
-    /**
-     * Get a new Format.Builder instance.
-     *
-     * @return the new Format.Builder instance.
-     */
-    public static Format.Builder newFormatBuilder() {
-        return Format.builder();
-    }
-
-    /**
-     * Get a Format from the provided Map of properties.
-     *
-     * @param formatMap the Map of properties to construct the Format from.
-     * @return the new Format instance.
-     */
-    public static Format getFormatter(Map<Object, Object> formatMap) {
-        return Format.fromMap(formatMap);
-    }
-
-    /**
-     * Get a Format from the provided ConfigurationNode.
-     * If absent, inserts a new Format into the node and returns it.
-     *
-     * @param node the ConfigurationNode holding the Format.
-     * @return the Format.
-     * @throws ObjectMappingException
-     */
-    public static Format getFormatter(ConfigurationNode node) throws ObjectMappingException {
-        if (!node.hasMapChildren()) {
-            return Format.builder().build().setNode(node);
+        public Builder logger(Logger logger) {
+            if (logger != null) {
+                this.logger = logger;
+            }
+            return this;
         }
-        return node.getValue(Format.TYPE_TOKEN);
-    }
 
-    /**
-     * Get a Format from the provided ConfigurationNode.
-     * If absent, inserts the provided default Format into the node and returns it.
-     *
-     * @param node the ConfigurationNode holding the Format.
-     * @param defaultFormat the default Format to use if there is not one present in the node.
-     * @return the Format.
-     * @throws ObjectMappingException
-     */
-    public static Format getFormatter(ConfigurationNode node, Format defaultFormat) throws ObjectMappingException {
-        if (!node.hasMapChildren()) {
-            return defaultFormat.setNode(node);
+        public Builder format(Format format) {
+            this.format = format;
+            return this;
         }
-        return node.getValue(Format.TYPE_TOKEN);
+
+        public Builder parameter(Class<?> type, Function<Text, CommandElement> function) {
+            this.types.put(type, function);
+            return this;
+        }
+
+        public CommandBus build() {
+            return new CommandBus(this);
+        }
     }
 }

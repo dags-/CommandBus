@@ -24,12 +24,12 @@
 
 package me.dags.commandbus.command;
 
+import me.dags.commandbus.utils.Format;
 import org.spongepowered.api.command.CommandCallable;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.text.Text;
-import org.spongepowered.api.text.format.TextColors;
 
 import java.util.*;
 
@@ -38,12 +38,14 @@ import java.util.*;
  */
 public class SpongeCommand implements CommandCallable {
 
-    private static final Text NOT_FOUND = Text.builder("Command not recognised").color(TextColors.GRAY).build();
+    private static final String SEE_HELP = "Command not recognised. See '/help {}'";
 
     private final CommandNode root;
+    private final Format format;
 
-    public SpongeCommand(CommandNode root) {
+    public SpongeCommand(CommandNode root, Format format) {
         this.root = root;
+        this.format = format;
     }
 
     public List<String> aliases() {
@@ -63,7 +65,7 @@ public class SpongeCommand implements CommandCallable {
     public CommandResult process(CommandSource source, String rawArgs) throws CommandException {
         List<CommandMethod.Instance> commands = findMatches(source, new CommandPath(rawArgs), root);
         if (commands.isEmpty()) {
-            source.sendMessage(NOT_FOUND);
+            format.error(SEE_HELP, aliases().get(0)).tell(source);
             return CommandResult.empty();
         }
         InvokeResult result = InvokeResult.EMPTY;
@@ -75,7 +77,7 @@ public class SpongeCommand implements CommandCallable {
             result = result.or(test);
         }
         if (result != InvokeResult.EMPTY) {
-            source.sendMessage(result.info());
+            format.error(result.message()).tell(source);
         }
         return CommandResult.empty();
     }

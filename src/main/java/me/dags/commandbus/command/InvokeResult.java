@@ -1,8 +1,5 @@
 package me.dags.commandbus.command;
 
-import org.spongepowered.api.text.Text;
-import org.spongepowered.api.text.format.TextColor;
-import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.util.Tristate;
 
 /**
@@ -16,15 +13,15 @@ class InvokeResult {
     static final InvokeResult NO_PERM = InvokeResult.of(Tristate.FALSE, "You do not have permission to do that");
 
     private final Tristate success;
-    private final Text info;
+    private final String message;
 
-    private InvokeResult(Tristate success, Text info) {
+    private InvokeResult(Tristate success, String message) {
         this.success = success;
-        this.info = info;
+        this.message = message;
     }
 
-    Text info() {
-        return info;
+    String message() {
+        return message;
     }
 
     Tristate state() {
@@ -42,8 +39,6 @@ class InvokeResult {
     }
 
     static InvokeResult of(Tristate result, String info) {
-        TextColor color = result == Tristate.FALSE ? TextColors.RED : TextColors.GRAY;
-        Text message = Text.builder(info).color(color).build();
-        return new InvokeResult(result, message);
+        return new InvokeResult(result, info);
     }
 }
