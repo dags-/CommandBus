@@ -27,9 +27,11 @@ package me.dags.commandbus.utils;
 import com.google.common.reflect.TypeToken;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
+import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.channel.MessageChannel;
 import org.spongepowered.api.text.channel.MessageReceiver;
+import org.spongepowered.api.text.chat.ChatType;
 import org.spongepowered.api.text.format.*;
 
 import java.util.Map;
@@ -206,14 +208,34 @@ public class Format {
             return this;
         }
 
-        public MessageBuilder tell(MessageChannel messageChannel) {
-            messageChannel.send(build());
+        public MessageBuilder tell(MessageReceiver... receivers) {
+            Text message = build();
+            for (MessageReceiver receiver : receivers) {
+                receiver.sendMessage(message);
+            }
             return this;
         }
 
-        public MessageBuilder tell(MessageReceiver... receivers) {
-            for (MessageReceiver receiver : receivers) {
-                tell(receiver);
+        public MessageBuilder tell(MessageChannel... messageChannels) {
+            Text message = build();
+            for (MessageChannel channel : messageChannels) {
+                channel.send(message);
+            }
+            return this;
+        }
+
+        public MessageBuilder tell(ChatType chatType, Player... receivers) {
+            Text message = build();
+            for (Player receiver : receivers) {
+                receiver.sendMessage(chatType, message);
+            }
+            return this;
+        }
+
+        public MessageBuilder tell(ChatType chatType, MessageChannel... messageChannels) {
+            Text message = build();
+            for (MessageChannel channel : messageChannels) {
+                channel.send(message, chatType);
             }
             return this;
         }
