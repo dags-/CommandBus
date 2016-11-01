@@ -26,7 +26,7 @@ public class ExampleCommands {
             desc = "Private message everyone",
             perm = @Permission(
                     value = "exampleplugin.pm.all",
-                    description = "Grants the User use of '/pm all'",
+                    description = "Grants the User use of '/pma'",
                     assign = @Assignment(role = "admin", value = true)
             )
     )
