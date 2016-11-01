@@ -161,6 +161,10 @@ public final class CommandBus {
         return format;
     }
 
+    public static CommandBus create() {
+        return builder().build();
+    }
+
     public static Builder builder() {
         return new Builder();
     }
