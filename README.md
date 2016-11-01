@@ -17,7 +17,7 @@ public class ExampleCommands {
             )
     )
     public void message(@Caller CommandSource from, @One("to") Player to, @Join("message") String message) {
-        Format.DEFAULT.stress("You => {}: ", to).info(message).tell(from);
+        Format.DEFAULT.stress("You => {}: ", to.getName()).info(message).tell(from);
         Format.DEFAULT.stress("{} => You: ", from.getName()).info(message).tell(to);
     }
 
