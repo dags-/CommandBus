@@ -93,9 +93,7 @@ class Registrar {
                 .forEach(permission -> permissionService.newDescriptionBuilder(plugin)
                         .ifPresent(builder -> {
                             builder.id(permission.value());
-                            if (permission.description().isEmpty()) {
-                                builder.description(Text.of(permission.description()));
-                            }
+                            builder.description(Text.of(permission.description()));
                             if (!permission.assign().role().isEmpty()) {
                                 builder.assign(permission.assign().role(), permission.assign().value());
                             }

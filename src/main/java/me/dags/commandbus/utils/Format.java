@@ -29,7 +29,10 @@ import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.text.Text;
-import org.spongepowered.api.text.action.*;
+import org.spongepowered.api.text.action.ClickAction;
+import org.spongepowered.api.text.action.HoverAction;
+import org.spongepowered.api.text.action.ShiftClickAction;
+import org.spongepowered.api.text.action.TextAction;
 import org.spongepowered.api.text.channel.MessageChannel;
 import org.spongepowered.api.text.channel.MessageReceiver;
 import org.spongepowered.api.text.chat.ChatType;
@@ -217,6 +220,14 @@ public class Format {
 
         public MessageBuilder tell(MessageReceiver receiver) {
             receiver.sendMessage(build());
+            return this;
+        }
+
+        public MessageBuilder tell(Iterable<? extends MessageReceiver> receivers) {
+            Text message = build();
+            for (MessageReceiver receiver : receivers) {
+                receiver.sendMessage(message);
+            }
             return this;
         }
 

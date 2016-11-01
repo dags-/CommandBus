@@ -131,7 +131,7 @@ public final class CommandBus {
             String warn = "Attempted to register commands for %s, but it is not a valid Sponge Plugin!";
             throw new CommandRegistrationException(warn, plugin.getClass());
         }
-        info("Registering commands for {}", container.get().getName());
+        info("Registering commands for {}", container.get().getId());
         registrar.submit(plugin);
     }
 
