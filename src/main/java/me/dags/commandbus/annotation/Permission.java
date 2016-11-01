@@ -13,9 +13,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Permission {
 
-    String id();
+    String value();
 
-    String description();
+    String description() default "";
 
     Assignment assign() default @Assignment(role = "", value = false);
 }

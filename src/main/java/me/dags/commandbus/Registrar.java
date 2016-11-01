@@ -89,11 +89,11 @@ class Registrar {
 
         PermissionService permissionService = Sponge.getServiceManager().provideUnchecked(PermissionService.class);
         permissions.stream()
-                .filter(permission -> !permission.id().isEmpty())
+                .filter(permission -> !permission.value().isEmpty())
                 .forEach(permission -> permissionService.newDescriptionBuilder(plugin)
                         .ifPresent(builder -> {
-                            builder.id(permission.id());
-                            if (!permission.description().isEmpty()) {
+                            builder.id(permission.value());
+                            if (permission.description().isEmpty()) {
                                 builder.description(Text.of(permission.description()));
                             }
                             if (!permission.assign().role().isEmpty()) {

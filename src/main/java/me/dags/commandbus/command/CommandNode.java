@@ -130,7 +130,7 @@ public class CommandNode {
 
     boolean testPermission(CommandSource source) {
         for (CommandMethod method : methods) {
-            if (method.permission().id().isEmpty() || source.hasPermission(method.permission().id())) {
+            if (method.permission().value().isEmpty() || source.hasPermission(method.permission().value())) {
                 return true;
             }
         }
@@ -148,7 +148,7 @@ public class CommandNode {
 
     private void usage(CommandSource source, String parent, Set<String> set) {
         for (CommandMethod method : methods) {
-            if (method.permission().id().isEmpty() || source.hasPermission(method.permission().id())) {
+            if (method.permission().value().isEmpty() || source.hasPermission(method.permission().value())) {
                 set.add(parent + " " + method.usage());
             }
         }

@@ -46,11 +46,11 @@ public class CommandSourceCache<K extends CommandSource, V> implements RemovalLi
     }
 
     /**
-     * Get the id for the given CommandSource.
+     * Get the value for the given CommandSource.
      * Alerts the CommandSource if absent.
      *
      * @param k The CommandSource
-     * @return Optional of the id - may be empty
+     * @return Optional of the value - may be empty
      */
     public Optional<V> get(K k) {
         V v = cache.getIfPresent(k);

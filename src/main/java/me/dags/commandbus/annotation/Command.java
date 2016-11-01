@@ -65,7 +65,7 @@ public @interface Command {
      * The permission node of this Command.
      * If not provided, it will be assumed that no permission is required to invoke the Command.
      */
-    Permission perm() default @Permission(id = "", description = "");
+    Permission perm() default @Permission("");
 
     /**
      * The description for this Command.

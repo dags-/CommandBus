@@ -208,7 +208,7 @@ public class CommandMethod {
             if (!method.fitsCaller(source)) {
                 return InvokeResult.of(Tristate.FALSE, "You must be a " + method.callerType() + " to use this command");
             }
-            if (!method.permission.id().isEmpty() && !source.hasPermission(method.permission.id())) {
+            if (!method.permission.value().isEmpty() && !source.hasPermission(method.permission.value())) {
                 return InvokeResult.NO_PERM;
             }
             try {
