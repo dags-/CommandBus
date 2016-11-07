@@ -97,12 +97,10 @@ public class CommandNode {
 
     Collection<String> completions(CommandSource source, CommandPath input) {
         Set<String> completions = new LinkedHashSet<>();
-        for (CommandMethod method : this.methods) {
-            if (method.parameterCount() > input.argIndex()) {
-                CommandParameter parameter = method.parameter(input.argIndex());
-                completions.addAll(parameter.element().complete(source, input.copyState(), new CommandContext()));
-            }
-        }
+        this.methods.stream().filter(method -> method.parameterCount() > input.argIndex()).forEach(method -> {
+            CommandParameter parameter = method.parameter(input.argIndex());
+            completions.addAll(parameter.element().complete(source, input.copyState(), new CommandContext()));
+        });
         return completions;
     }
 
@@ -113,11 +111,7 @@ public class CommandNode {
     List<String> suggestions(String match) {
         List<String> list = new ArrayList<>();
         for (CommandNode child : this.children) {
-            for (String s : child.aliases) {
-                if (s.startsWith(match)) {
-                    list.add(s);
-                }
-            }
+            list.addAll(child.aliases.stream().filter(s -> s.startsWith(match)).collect(Collectors.toList()));
         }
         return list;
     }
@@ -147,11 +141,11 @@ public class CommandNode {
     }
 
     private void usage(CommandSource source, String parent, Set<String> set) {
-        for (CommandMethod method : methods) {
-            if (method.permission().value().isEmpty() || source.hasPermission(method.permission().value())) {
-                set.add(parent + " " + method.usage());
-            }
-        }
+        methods.stream()
+                .filter(method -> method.permission().value().isEmpty() || source.hasPermission(method.permission().value()))
+                .map(method -> parent + " " + method.usage())
+                .forEach(set::add);
+
         for (CommandNode child : children) {
             child.usage(source, parent + " " + child.main, set);
         }
