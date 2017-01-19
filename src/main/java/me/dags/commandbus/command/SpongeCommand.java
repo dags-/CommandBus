@@ -30,7 +30,10 @@ import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.text.Text;
+import org.spongepowered.api.world.Location;
+import org.spongepowered.api.world.World;
 
+import javax.annotation.Nullable;
 import java.util.*;
 
 /**
@@ -83,7 +86,7 @@ public class SpongeCommand implements CommandCallable {
     }
 
     @Override
-    public List<String> getSuggestions(CommandSource source, String arguments) throws CommandException {
+    public List<String> getSuggestions(CommandSource source, String arguments, @Nullable Location<World> location) throws CommandException {
         List<String> suggestions = new ArrayList<>();
 
         CommandPath input = new CommandPath(arguments);
@@ -118,12 +121,12 @@ public class SpongeCommand implements CommandCallable {
     }
 
     @Override
-    public Optional<? extends Text> getShortDescription(CommandSource source) {
+    public Optional<Text> getShortDescription(CommandSource source) {
         return Optional.empty();
     }
 
     @Override
-    public Optional<? extends Text> getHelp(CommandSource source) {
+    public Optional<Text> getHelp(CommandSource source) {
         Text.Builder builder = Text.builder();
         Iterator<String> usage = root.usage(source).iterator();
         while (usage.hasNext()) {

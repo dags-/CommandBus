@@ -30,8 +30,12 @@ public class ParameterTypes {
         map.put(Boolean.class, map.get(boolean.class));
         map.put(double.class, s -> GenericArguments.doubleNum(Text.of(s)));
         map.put(Double.class, map.get(double.class));
+        map.put(float.class, map.get(double.class));
+        map.put(Float.class, map.get(float.class));
         map.put(int.class, s -> GenericArguments.integer(Text.of(s)));
         map.put(Integer.class, map.get(int.class));
+        map.put(long.class, map.get(int.class));
+        map.put(Long.class, map.get(long.class));
         map.put(Location.class, s -> GenericArguments.location(Text.of(s)));
         map.put(Player.class, s -> GenericArguments.player(Text.of(s)));
         map.put(String.class, s -> GenericArguments.string(Text.of(s)));
