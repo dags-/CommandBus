@@ -51,6 +51,10 @@ public final class FMT {
         return FORMAT.info(input, args);
     }
 
+    public static Formatter stress(Object input, Object... args) {
+        return FORMAT.stress(input, args);
+    }
+
     public static Formatter subdued(Object input, Object... args) {
         return FORMAT.subdued(input, args);
     }
