@@ -24,7 +24,7 @@
 
 package me.dags.commandbus.command;
 
-import me.dags.commandbus.utils.Format;
+import me.dags.commandbus.format.Format;
 import org.spongepowered.api.command.CommandCallable;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;

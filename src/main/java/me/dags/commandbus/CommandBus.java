@@ -26,8 +26,9 @@ package me.dags.commandbus;
 
 import me.dags.commandbus.command.ParameterTypes;
 import me.dags.commandbus.exception.CommandRegistrationException;
-import me.dags.commandbus.utils.Format;
-import me.dags.commandbus.utils.FormatSerializer;
+import me.dags.commandbus.format.FMT;
+import me.dags.commandbus.format.Format;
+import me.dags.commandbus.format.FormatSerializer;
 import ninja.leaping.configurate.objectmapping.serialize.TypeSerializers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -173,7 +174,7 @@ public final class CommandBus {
 
         private Map<Class<?>, Function<Text, CommandElement>> types = new HashMap<>();
         private Logger logger = LoggerFactory.getLogger(CommandBus.class.getSimpleName());
-        private Format format = Format.DEFAULT;
+        private Format format = FMT.copy();
         private boolean logging = true;
 
         public Builder logging(boolean logging) {
