@@ -1,7 +1,7 @@
 # CommandBus
 Another command annotation processing thing
 
-[![Release](https://jitpack.io/v/dags-/CommandBus.svg)](https://jitpack.io/dags-/CommandBus)
+[![Release](https://jitpack.io/v/dags-/CommandBus.svg)](https://jitpack.io/#dags-/CommandBus)
 
 
 #### example command code
