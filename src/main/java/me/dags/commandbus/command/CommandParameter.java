@@ -108,6 +108,14 @@ class CommandParameter {
         }
     }
 
+    Object cast(Object value) {
+        // GenericArgs only support doubles, so need to manually convert to float as required
+        if (Float.class.isAssignableFrom(type()) && Number.class.isInstance(value)) {
+            return Number.class.cast(value).floatValue();
+        }
+        return value;
+    }
+
     Text getId() {
         return id;
     }

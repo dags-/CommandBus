@@ -27,10 +27,8 @@ package me.dags.commandbus.format;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.text.Text;
-import org.spongepowered.api.text.action.ClickAction;
-import org.spongepowered.api.text.action.HoverAction;
-import org.spongepowered.api.text.action.ShiftClickAction;
-import org.spongepowered.api.text.action.TextAction;
+import org.spongepowered.api.text.TextRepresentable;
+import org.spongepowered.api.text.action.*;
 import org.spongepowered.api.text.channel.MessageChannel;
 import org.spongepowered.api.text.channel.MessageReceiver;
 import org.spongepowered.api.text.chat.ChatType;
@@ -38,7 +36,7 @@ import org.spongepowered.api.text.chat.ChatType;
 /**
  * @author dags <dags@dags.me>
  */
-public class Formatter {
+public class Formatter implements TextRepresentable {
 
     private final Format format;
     private final Text.Builder builder = Text.builder();
@@ -54,8 +52,9 @@ public class Formatter {
     }
 
     public Formatter newLine() {
-        empty = false;
-        builder.append(Text.NEW_LINE);
+        if (!empty) {
+            builder.append(Text.NEW_LINE);
+        }
         return this;
     }
 
@@ -135,7 +134,7 @@ public class Formatter {
     }
 
     public Text build() {
-        return builder.build();
+        return toText();
     }
 
     public Formatter tell(MessageReceiver receiver) {
@@ -189,5 +188,14 @@ public class Formatter {
 
     public Formatter log() {
         return tell(Sponge.getServer().getConsole());
+    }
+
+    @Override
+    public Text toText() {
+        return builder.build();
+    }
+
+    public HoverAction<Text> toHoverAction() {
+        return TextActions.showText(toText());
     }
 }

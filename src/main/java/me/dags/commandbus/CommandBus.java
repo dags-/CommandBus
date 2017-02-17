@@ -24,6 +24,8 @@
 
 package me.dags.commandbus;
 
+import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner;
+import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult;
 import me.dags.commandbus.command.ParameterTypes;
 import me.dags.commandbus.exception.CommandRegistrationException;
 import me.dags.commandbus.format.FMT;
@@ -37,9 +39,7 @@ import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.text.Text;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 
 /**
@@ -70,6 +70,62 @@ public final class CommandBus {
         this.logging = builder.logging;
         this.format = builder.format;
         this.parameterTypes = new ParameterTypes(builder.types);
+    }
+
+    /**
+     * Scan the provided Class's package for Commands to register.
+     *
+     * @param child The Class who's package should be scanned.
+     * @return The current CommandBus instance (for chaining).
+     */
+    public CommandBus registerPackageOf(Class<?> child) {
+        return registerPackage(false, child.getPackage().getName());
+    }
+
+    /**
+     * Scan the provided Class's package and all Sub-Packages for Commands to register.
+     *
+     * @param child The Class who's package and sub-packages will be scanned.
+     * @return The current CommandBus instance (for chaining).
+     */
+    public CommandBus registerSubPackagesOf(Class<?> child) {
+        return registerPackage(true, child.getPackage().getName());
+    }
+
+    /**
+     * Scan the provided Packages for Commands to register.
+     * Packages/Classes can be Blacklisted by prepending the path with a '-' character.
+     *
+     * @param path The path(s) of the Package(s) to scan.
+     * @return The current CommandBus instance (for chaining).
+     */
+    public CommandBus registerPackage(String... path) {
+        return registerPackage(false, path);
+    }
+
+    /**
+     * Scan the provided Packages for Commands to register.
+     * Packages/Classes can be Blacklisted by prepending the path with a '-' character.
+     *
+     * @param recurse Scans Sub-Packages if true.
+     * @param path The path(s) of the Package(s) to scan.
+     * @return The current CommandBus instance (for chaining).
+     */
+    public CommandBus registerPackage(boolean recurse, String... path) {
+        info("Scanning package {} for commands...", Arrays.toString(path));
+        ScanResult result = new FastClasspathScanner(path).disableRecursiveScanning(!recurse).scan();
+        List<String> matches = result.getNamesOfAllClasses();
+        info("Discovered {} Command classes in package {}", matches.size(), path);
+        for (String name : matches) {
+            try {
+                Class<?> clazz = Class.forName(name);
+                System.out.println(clazz);
+                register(clazz);
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+        return this;
     }
 
     /**
@@ -116,6 +172,7 @@ public final class CommandBus {
     }
 
     private void register(Object object) {
+        System.out.println(object.getClass().getName());
         registrar.register(object);
     }
 

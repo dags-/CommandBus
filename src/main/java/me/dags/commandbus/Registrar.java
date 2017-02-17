@@ -24,6 +24,7 @@
 
 package me.dags.commandbus;
 
+import me.dags.commandbus.annotation.Assignment;
 import me.dags.commandbus.annotation.Command;
 import me.dags.commandbus.annotation.Permission;
 import me.dags.commandbus.command.CommandMethod;
@@ -37,9 +38,7 @@ import org.spongepowered.api.service.permission.PermissionService;
 import org.spongepowered.api.text.Text;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -48,7 +47,7 @@ import java.util.Map;
 class Registrar {
 
     private final Map<String, CommandNode> roots = new HashMap<>();
-    private final List<Permission> permissions = new ArrayList<>();
+    private final Map<Permission, Assignment> permissions = new HashMap<>();
     private final CommandBus commandBus;
     private boolean submitted = false;
 
@@ -65,9 +64,13 @@ class Registrar {
                     try {
                         CommandMethod commandMethod = new CommandMethod(commandBus.getParameterTypes(), object, method);
                         CommandNode commandNode = getParentTree(commandMethod.command());
-                        commandNode.addAliases(commandMethod.command().aliases());
+                        commandNode.addAliases(commandMethod.command().alias());
                         commandNode.addCommandMethod(commandMethod);
-                        permissions.add(commandMethod.permission());
+                        Permission permission = commandMethod.permission();
+                        Assignment assignment = commandMethod.assignment();
+                        if (!permission.value().isEmpty()) {
+                            permissions.put(permission, assignment);
+                        }
                         count++;
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -84,23 +87,21 @@ class Registrar {
             throw new UnsupportedOperationException("Cannot submit commands more than once");
         }
 
-        CommandManager commandManager = Sponge.getCommandManager();
-        roots.values().stream().map(n -> new SpongeCommand(n, commandBus.getFormat())).forEach(c -> commandManager.register(plugin, c, c.aliases()));
+        final CommandManager commandManager = Sponge.getCommandManager();
+        roots.values().stream()
+                .map(node -> new SpongeCommand(node, commandBus.getFormat()))
+                .forEach(command -> commandManager.register(plugin, command, command.aliases()));
 
-        PermissionService permissionService = Sponge.getServiceManager().provideUnchecked(PermissionService.class);
-        permissions.stream()
-                .filter(permission -> !permission.value().isEmpty())
-                .forEach(permission -> permissionService.newDescriptionBuilder(plugin)
-                        .ifPresent(builder -> {
-                            builder.id(permission.value());
-                            builder.description(Text.of(permission.description()));
-                            if (!permission.assign().role().isEmpty()) {
-                                builder.assign(permission.assign().role(), permission.assign().value());
-                            }
-                            builder.register();
-                        })
-                );
-
+        final PermissionService permissionService = Sponge.getServiceManager().provideUnchecked(PermissionService.class);
+        permissions.entrySet().forEach(entry -> permissionService.newDescriptionBuilder(plugin).ifPresent(builder -> {
+            Permission permission = entry.getKey();
+            Assignment assignment = entry.getValue();
+            builder.id(permission.value());
+            builder.description(Text.of(permission.description()));
+            if (!assignment.role().isEmpty()) {
+                builder.assign(assignment.role(), assignment.permit());
+            }
+        }));
 
         commandBus.info("Registered {} main commands", roots.size());
         commandBus.info("Registered {} permissions", permissions.size());
@@ -121,14 +122,14 @@ class Registrar {
 
     private CommandNode getParentTree(Command command) throws ArgumentParseException {
         if (command.parent().isEmpty()) {
-            return getRoot(command.aliases()[0]);
+            return getRoot(command.alias()[0]);
         } else {
             CommandPath input = new CommandPath(command.parent());
             CommandNode node = getRoot(input.currentState().next());
             while (input.currentState().hasNext()) {
                 node = node.getOrCreateChild(input.currentState().next());
             }
-            return node.getOrCreateChild(command.aliases()[0]);
+            return node.getOrCreateChild(command.alias()[0]);
         }
     }
 }

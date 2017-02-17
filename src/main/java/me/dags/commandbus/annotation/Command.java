@@ -43,10 +43,10 @@ import java.lang.annotation.Target;
 public @interface Command {
 
     /**
-     * Provide either a single String alias for this Command, or an Array of aliases.
+     * Provide either a single String alias for this Command, or an Array of alias.
      * The first alias provided will be used as the Command's 'main' alias.
      */
-    String[] aliases();
+    String[] alias();
 
     /**
      * If this @Command represents a sub-command, the parent command(s) alias(es) should
@@ -61,16 +61,9 @@ public @interface Command {
      */
     String parent() default "";
 
-    /**
-     * The permission node of this Command.
-     * If not provided, it will be assumed that no permission is required to invoke the Command.
-     */
-    Permission perm() default @Permission("");
+    Assignment assign() default @Assignment(role = "", permit = false);
 
-    /**
-     * The description for this Command.
-     * If not provided, CommandBus will generate a useage String in the form
-     * '/maincommand subcommand \<arg1\>... - [permission.node.if.provided]'
-     */
-    String desc() default "";
+    Permission permission() default @Permission("");
+
+    Description description() default @Description("");
 }

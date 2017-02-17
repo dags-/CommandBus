@@ -34,14 +34,12 @@ import java.lang.annotation.Target;
  */
 
 /**
- * Used to apply a roll assignment for the Command's accompanying @Permission.
- * May be defined inside the @Command annotation or by annotating the Method.
+ * A description for the given Command method.
+ * Can be defined inside the @Command annotation or by annotating the Method.
  */
-@Target({ElementType.ANNOTATION_TYPE, ElementType.METHOD})
+@Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Assignment {
+public @interface Description {
 
-    String role();
-
-    boolean permit();
+    String value();
 }

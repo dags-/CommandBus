@@ -24,7 +24,9 @@
 
 package me.dags.commandbus.command;
 
+import me.dags.commandbus.annotation.Assignment;
 import me.dags.commandbus.annotation.Command;
+import me.dags.commandbus.annotation.Description;
 import me.dags.commandbus.annotation.Permission;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
@@ -43,6 +45,8 @@ public class CommandMethod {
 
     private final Command command;
     private final Permission permission;
+    private final Assignment assignment;
+    private final Description description;
     private final Object owner;
     private final Method target;
     private final CommandElement element;
@@ -52,11 +56,19 @@ public class CommandMethod {
     private final int argCount;
 
     public CommandMethod(ParameterTypes types, Object owner, Method target) {
-        this.command = target.getDeclaredAnnotation(Command.class);
-        this.permission = command.perm();
+        Command command = target.getAnnotation(Command.class);
+        Permission permission = target.getAnnotation(Permission.class);
+        Assignment assignment = target.getAnnotation(Assignment.class);
+        Description description = target.getAnnotation(Description.class);
+
         this.owner = owner;
         this.target = target;
+        this.command = command;
         this.parameters = getParameters(types, target);
+        this.permission = permission == null ? command.permission() : permission;
+        this.assignment = assignment == null ? command.assign() : this.permission.assign();
+        this.description = description == null ? command.description() : description;
+
         CommandElement[] elements = toElements(parameters);
         this.element = elements.length == 0 ? GenericArguments.none() : GenericArguments.seq(elements);
         this.argCount = elements.length;
@@ -77,9 +89,17 @@ public class CommandMethod {
         return permission;
     }
 
+    public Assignment assignment() {
+        return assignment;
+    }
+
+    public String description() {
+        return description.value().isEmpty() ? usage() : description.value();
+    }
+
     @Override
     public String toString() {
-        String command = command().aliases()[0] + " " + usage();
+        String command = command().alias()[0] + " " + usage();
         return command().parent().isEmpty() ? command : command().parent() + " " + command;
     }
 
@@ -159,7 +179,7 @@ public class CommandMethod {
             }
             Optional<?> arg = context.getOne(parameter.getId());
             if (arg.isPresent()) {
-                args[i] = arg.get();
+                args[i] = parameter.cast(arg.get());
             } else {
                 return;
             }
@@ -227,7 +247,7 @@ public class CommandMethod {
 
         @Override
         public String toString() {
-            String string = method.command().aliases()[0] + " " + method.usage();
+            String string = method.command().alias()[0] + " " + method.usage();
             return method.command().parent().isEmpty() ? string : method.command().parent() + " " + string;
         }
     }

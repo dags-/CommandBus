@@ -28,6 +28,8 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.ArgumentParseException;
 import org.spongepowered.api.command.args.CommandArgs;
 import org.spongepowered.api.command.args.CommandContext;
+import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.action.TextActions;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -122,8 +124,8 @@ public class CommandNode {
         return list;
     }
 
-    List<String> usage(CommandSource source) {
-        Set<String> set = new LinkedHashSet<>();
+    List<Text> usage(CommandSource source) {
+        Set<Text> set = new HashSet<>();
         usage(source, "/" + main, set);
         return set.stream().sorted().collect(Collectors.toList());
     }
@@ -146,10 +148,13 @@ public class CommandNode {
         return aliases.contains(alias);
     }
 
-    private void usage(CommandSource source, String parent, Set<String> set) {
+    private void usage(CommandSource source, String parent, Set<Text> set) {
         for (CommandMethod method : methods) {
             if (method.permission().value().isEmpty() || source.hasPermission(method.permission().value())) {
-                set.add(parent + " " + method.usage());
+                String line = parent + " " + method.usage();
+                Text description = Text.of(method.description());
+                Text usage = Text.builder(line).onHover(TextActions.showText(description)).build();
+                set.add(usage);
             }
         }
         for (CommandNode child : children) {

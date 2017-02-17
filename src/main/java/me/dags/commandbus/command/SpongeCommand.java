@@ -25,6 +25,7 @@
 package me.dags.commandbus.command;
 
 import me.dags.commandbus.format.Format;
+import me.dags.commandbus.format.Formatter;
 import org.spongepowered.api.command.CommandCallable;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
@@ -34,14 +35,17 @@ import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * @author dags <dags@dags.me>
  */
 public class SpongeCommand implements CommandCallable {
 
-    private static final String SEE_HELP = "Command not recognised. See '/help {}'";
+    private static final String SEE_HELP = "Command not recognised. Hover this text for suggestions or see '/help %s'";
 
     private final CommandNode root;
     private final Format format;
@@ -55,22 +59,23 @@ public class SpongeCommand implements CommandCallable {
         return root.aliases();
     }
 
-    private List<CommandMethod.Instance> findMatches(CommandSource source, CommandPath input, CommandNode node) {
-        List<CommandMethod.Instance> matchList = new ArrayList<>();
-        node.parse(source, input, matchList);
-        if (matchList.size() > 1) {
-            Collections.sort(matchList);
-        }
-        return matchList;
-    }
-
     @Override
     public CommandResult process(CommandSource source, String rawArgs) throws CommandException {
-        List<CommandMethod.Instance> commands = findMatches(source, new CommandPath(rawArgs), root);
+        List<CommandMethod.Instance> commands = new ArrayList<>();
+        root.parse(source, new CommandPath(rawArgs), commands);
+        Collections.sort(commands);
+
         if (commands.isEmpty()) {
-            format.error(SEE_HELP, aliases().get(0)).tell(source);
-            return CommandResult.empty();
+            String alias = aliases().get(0);
+            Formatter hover  = format.message();
+            getSuggestions(source, rawArgs, null).forEach(hover.newLine()::info);
+
+            Formatter error = format.message().warn(SEE_HELP, alias);
+            error.action(hover.toHoverAction()).action(hover.toHoverAction());
+
+            throw new CommandException(error.build());
         }
+
         InvokeResult result = InvokeResult.EMPTY;
         for (CommandMethod.Instance instance : commands) {
             InvokeResult test = instance.invoke(source);
@@ -79,9 +84,15 @@ public class SpongeCommand implements CommandCallable {
             }
             result = result.or(test);
         }
-        if (result != InvokeResult.EMPTY) {
-            format.error(result.message()).tell(source);
+
+        if (result == InvokeResult.UNKNOWN) {
+            throw new CommandException(format.warn(result.message()).build());
         }
+
+        if (result == InvokeResult.NO_PERM) {
+            throw new CommandException(format.error(result.message()).build());
+        }
+
         return CommandResult.empty();
     }
 
@@ -127,15 +138,10 @@ public class SpongeCommand implements CommandCallable {
 
     @Override
     public Optional<Text> getHelp(CommandSource source) {
-        Text.Builder builder = Text.builder();
-        Iterator<String> usage = root.usage(source).iterator();
-        while (usage.hasNext()) {
-            builder.append(Text.of(usage.next()));
-            if (usage.hasNext()) {
-                builder.append(Text.NEW_LINE);
-            }
-        }
-        return Optional.of(builder.build());
+        List<Text> usage = root.usage(source);
+        Formatter formatter = format.message();
+        usage.forEach(formatter.newLine()::append);
+        return Optional.of(formatter.build());
     }
 
     @Override
