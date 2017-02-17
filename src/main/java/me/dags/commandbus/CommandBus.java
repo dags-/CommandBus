@@ -119,7 +119,6 @@ public final class CommandBus {
         for (String name : matches) {
             try {
                 Class<?> clazz = Class.forName(name);
-                System.out.println(clazz);
                 register(clazz);
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
@@ -172,7 +171,6 @@ public final class CommandBus {
     }
 
     private void register(Object object) {
-        System.out.println(object.getClass().getName());
         registrar.register(object);
     }
 

@@ -72,7 +72,7 @@ public class CommandNode {
         return null;
     }
 
-    void parse(CommandSource source, CommandPath input, List<CommandMethod.Instance> results) {
+    void parse(CommandSource source, CommandPath input, List<CommandMethod.Instance> results, List<ArgumentParseException> exceptions) {
         for (CommandMethod method : this.methods) {
             if (input.remaining() == method.parameterCount() || (method.join() && input.remaining() >= method.parameterCount())) {
                 try {
@@ -82,17 +82,20 @@ public class CommandNode {
                     if (method.fitsContext(context)) {
                         results.add(new CommandMethod.Instance(method, context));
                     }
-                } catch (ArgumentParseException ignored) {
+                } catch (ArgumentParseException exception) {
+                    exceptions.add(exception);
                 }
             }
         }
+
         if (input.currentState().hasNext()) {
             try {
                 CommandNode child = getChild(input.currentState().next());
                 if (child != null) {
-                    child.parse(source, input, results);
+                    child.parse(source, input, results, exceptions);
                 }
-            } catch (ArgumentParseException ignored) {
+            } catch (ArgumentParseException exception) {
+                exceptions.add(exception);
             }
         }
     }

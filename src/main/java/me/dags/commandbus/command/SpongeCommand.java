@@ -30,6 +30,7 @@ import org.spongepowered.api.command.CommandCallable;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
+import org.spongepowered.api.command.args.ArgumentParseException;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
@@ -61,19 +62,24 @@ public class SpongeCommand implements CommandCallable {
 
     @Override
     public CommandResult process(CommandSource source, String rawArgs) throws CommandException {
+        List<ArgumentParseException> exceptions = new ArrayList<>();
         List<CommandMethod.Instance> commands = new ArrayList<>();
-        root.parse(source, new CommandPath(rawArgs), commands);
+        root.parse(source, new CommandPath(rawArgs), commands, exceptions);
         Collections.sort(commands);
 
         if (commands.isEmpty()) {
-            String alias = aliases().get(0);
-            Formatter hover  = format.message();
-            getSuggestions(source, rawArgs, null).forEach(hover.newLine()::info);
+            if (exceptions.isEmpty()) {
+                String alias = aliases().get(0);
+                Formatter hover = format.message();
+                getSuggestions(source, rawArgs, null).forEach(hover.newLine()::info);
 
-            Formatter error = format.message().warn(SEE_HELP, alias);
-            error.action(hover.toHoverAction()).action(hover.toHoverAction());
+                Formatter error = format.message().warn(SEE_HELP, alias);
+                error.action(hover.toHoverAction()).action(hover.toHoverAction());
 
-            throw new CommandException(error.build());
+                throw new CommandException(error.build());
+            } else {
+                throw exceptions.get(exceptions.size() - 1);
+            }
         }
 
         InvokeResult result = InvokeResult.EMPTY;
