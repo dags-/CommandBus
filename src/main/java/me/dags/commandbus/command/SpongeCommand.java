@@ -46,7 +46,7 @@ import java.util.Optional;
  */
 public class SpongeCommand implements CommandCallable {
 
-    private static final String SEE_HELP = "Command not recognised. Hover this text for suggestions or see '/help %s'";
+    private static final String SEE_HELP = "Command not recognised. See '/help %s'";
 
     private final CommandNode root;
     private final Format format;
@@ -70,13 +70,8 @@ public class SpongeCommand implements CommandCallable {
         if (commands.isEmpty()) {
             if (exceptions.isEmpty()) {
                 String alias = aliases().get(0);
-                Formatter hover = format.message();
-                getSuggestions(source, rawArgs, null).forEach(hover.newLine()::info);
-
-                Formatter error = format.message().warn(SEE_HELP, alias);
-                error.action(hover.toHoverAction()).action(hover.toHoverAction());
-
-                throw new CommandException(error.build());
+                Text help = getHelp(source).orElse(format.error(SEE_HELP, alias).build());
+                throw new CommandException(help);
             } else {
                 throw exceptions.get(exceptions.size() - 1);
             }
@@ -146,7 +141,9 @@ public class SpongeCommand implements CommandCallable {
     public Optional<Text> getHelp(CommandSource source) {
         List<Text> usage = root.usage(source);
         Formatter formatter = format.message();
-        usage.forEach(formatter.newLine()::append);
+        for (Text text : usage) {
+            formatter.newLine().append(text);
+        }
         return Optional.of(formatter.build());
     }
 

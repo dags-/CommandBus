@@ -83,7 +83,7 @@ public class FormatSerializer implements TypeSerializer<Format> {
             return TextFormat.NONE;
         }
 
-        String colorId = node.getNode("color").getString(null);
+        String colorId = node.getNode("color").getString("");
         TextColor color = Sponge.getRegistry().getType(TextColor.class, colorId).orElse(null);
 
         TextStyle style = TextStyles.of();
@@ -149,7 +149,7 @@ public class FormatSerializer implements TypeSerializer<Format> {
 
         Map map = (Map) object;
         String colorId = (String) map.get("color");
-        colorId = colorId != null ? colorId : "";
+        colorId = colorId == null ? "" : colorId;
         TextColor color = Sponge.getRegistry().getType(TextColor.class, colorId).orElse(null);
 
         TextStyle style = TextStyles.of();

@@ -109,9 +109,9 @@ class CommandParameter {
     }
 
     Object cast(Object value) {
-        // GenericArgs only support doubles, so need to manually convert to float as required
-        if (Float.class.isAssignableFrom(type()) && Number.class.isInstance(value)) {
-            return Number.class.cast(value).floatValue();
+        // support lower bit number types than just Integers & Doubles
+        if (Number.class.isInstance(value)) {
+            return castNumber(value, type);
         }
         return value;
     }
@@ -143,5 +143,19 @@ class CommandParameter {
     @Override
     public String toString() {
         return "<" + name + ">";
+    }
+
+    private static Object castNumber(Object in, Class<?> type) {
+        Number number = Number.class.cast(in);
+        if (type == float.class || type == Float.class) {
+            return number.floatValue();
+        }
+        if (type == short.class || type == Short.class) {
+            return number.shortValue();
+        }
+        if (type == byte.class || type == Byte.class) {
+            return number.byteValue();
+        }
+        return in;
     }
 }

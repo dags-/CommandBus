@@ -156,7 +156,10 @@ public class CommandNode {
             if (method.permission().value().isEmpty() || source.hasPermission(method.permission().value())) {
                 String line = parent + " " + method.usage();
                 Text description = Text.of(method.description());
-                Text usage = Text.builder(line).onHover(TextActions.showText(description)).build();
+                Text usage = Text.builder(line)
+                        .onHover(TextActions.showText(description))
+                        .onClick(TextActions.suggestCommand(line))
+                        .build();
                 set.add(usage);
             }
         }

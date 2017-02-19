@@ -28,6 +28,8 @@ public class ParameterTypes {
         Map<Class<?>, Function<String, CommandElement>> map = new HashMap<>();
         map.put(boolean.class, s -> GenericArguments.bool(Text.of(s)));
         map.put(Boolean.class, map.get(boolean.class));
+        map.put(byte.class, s -> GenericArguments.integer(Text.of(s)));
+        map.put(Byte.class, map.get(byte.class));
         map.put(double.class, s -> GenericArguments.doubleNum(Text.of(s)));
         map.put(Double.class, map.get(double.class));
         map.put(float.class, map.get(double.class));
@@ -36,6 +38,8 @@ public class ParameterTypes {
         map.put(Integer.class, map.get(int.class));
         map.put(long.class, map.get(int.class));
         map.put(Long.class, map.get(long.class));
+        map.put(short.class, s -> GenericArguments.integer(Text.of(s)));
+        map.put(Short.class, map.get(Short.class));
         map.put(Location.class, s -> GenericArguments.location(Text.of(s)));
         map.put(Player.class, s -> GenericArguments.player(Text.of(s)));
         map.put(String.class, s -> GenericArguments.string(Text.of(s)));

@@ -53,7 +53,7 @@ public class Formatter implements TextRepresentable {
 
     public Formatter newLine() {
         if (!empty) {
-            builder.append(Text.NEW_LINE);
+            append(Text.NEW_LINE);
         }
         return this;
     }
