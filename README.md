@@ -31,7 +31,17 @@ public class ExampleCommands {
 public class ExamplePlugin {
 
     public void ontInit(GameInitializationEvent event) {
+        // Register commands in a specific class
         CommandBus.create().register(ExampleCommands.class).submit(this);
+        
+        // Register commands in a specific object
+        CommandBus.create().register(new ExampleCommands(..)).submit(this);
+        
+        // Register commands from all classes in the same package as ExampleCommands.class
+        CommandBus.create().registerPackageOf(ExampleCommands.class).submit(this);
+        
+        // Register commands from all classes in the same package as ExampleCommands.class and all it's sub-packages
+        CommandBus.create().registerSubPackagesOf(ExampleCommands.class).submit(this);
     }
 }
 ```
