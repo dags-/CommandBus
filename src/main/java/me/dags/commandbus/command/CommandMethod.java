@@ -65,9 +65,9 @@ public class CommandMethod {
         this.target = target;
         this.command = command;
         this.parameters = getParameters(types, target);
-        this.permission = permission == null ? command.permission() : permission;
-        this.assignment = assignment == null ? command.assign() : this.permission.assign();
-        this.description = description == null ? command.description() : description;
+        this.permission = permission != null ? permission : command.permission();
+        this.assignment = assignment != null ? assignment : (!this.permission.assign().role().isEmpty() ? this.permission.assign() : command.assign());
+        this.description = description != null ? description : command.description();
 
         CommandElement[] elements = toElements(parameters);
         this.element = elements.length == 0 ? GenericArguments.none() : GenericArguments.seq(elements);
