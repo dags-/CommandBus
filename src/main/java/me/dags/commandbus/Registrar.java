@@ -101,6 +101,7 @@ class Registrar {
             if (!assignment.role().isEmpty()) {
                 builder.assign(assignment.role(), assignment.permit());
             }
+            builder.register();
         }));
 
         commandBus.info("Registered {} main commands", roots.size());
