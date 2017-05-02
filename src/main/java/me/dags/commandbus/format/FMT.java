@@ -47,6 +47,10 @@ public final class FMT {
         return FORMAT.listBuilder();
     }
 
+    public static Formatter fmt() {
+        return FORMAT.message();
+    }
+
     public static Formatter info(Object input, Object... args) {
         return FORMAT.info(input, args);
     }

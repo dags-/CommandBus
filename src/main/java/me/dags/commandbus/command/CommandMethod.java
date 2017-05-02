@@ -52,6 +52,7 @@ public class CommandMethod {
     private final CommandElement element;
     private final CommandParameter[] parameters;
 
+    private final boolean collect;
     private final boolean join;
     private final int argCount;
 
@@ -73,12 +74,13 @@ public class CommandMethod {
         this.element = elements.length == 0 ? GenericArguments.none() : GenericArguments.seq(elements);
         this.argCount = elements.length;
         boolean join = false;
+        boolean collect = false;
         for (CommandParameter parameter : parameters) {
-            if (parameter.join()) {
-                join = true;
-            }
+            join = join || parameter.join();
+            collect = collect || parameter.collect();
         }
         this.join = join;
+        this.collect = collect;
     }
 
     public Command command() {
@@ -105,6 +107,10 @@ public class CommandMethod {
 
     boolean join() {
         return join;
+    }
+
+    boolean collect() {
+        return collect;
     }
 
     int parameterCount() {
@@ -137,6 +143,9 @@ public class CommandMethod {
     boolean fitsContext(CommandContext context) {
         for (CommandParameter parameter : parameters) {
             if (parameter.caller()) {
+                continue;
+            }
+            if (parameter.collect()) {
                 continue;
             }
             Optional<?> optional = context.getOne(parameter.getId());

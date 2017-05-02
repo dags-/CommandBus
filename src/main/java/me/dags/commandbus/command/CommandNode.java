@@ -28,6 +28,7 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.ArgumentParseException;
 import org.spongepowered.api.command.args.CommandArgs;
 import org.spongepowered.api.command.args.CommandContext;
+import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.action.TextActions;
 
@@ -74,14 +75,29 @@ public class CommandNode {
 
     void parse(CommandSource source, CommandPath input, List<CommandMethod.Instance> results, List<ArgumentParseException> exceptions) {
         for (CommandMethod method : this.methods) {
-            if (input.remaining() == method.parameterCount() || (method.join() && input.remaining() >= method.parameterCount())) {
+            boolean withinBound = input.remaining() == method.parameterCount();
+            boolean join = method.join() && input.remaining() >= method.parameterCount();
+            boolean collect = method.collect() && input.remaining() >= method.parameterCount();
+
+            if (withinBound || join || collect) {
                 try {
                     CommandArgs commandArgs = input.copyState();
                     CommandContext context = new CommandContext();
-                    method.elements().parse(source, commandArgs, context);
+                    CommandElement element = method.elements();
+
+                    if (collect) {
+                        element = method.parameter(method.parameterCount() - 1).element();
+                        while (commandArgs.hasNext()) {
+                            element.parse(source, commandArgs, context);
+                        }
+                    } else {
+                        element.parse(source, commandArgs, context);
+                    }
+
                     if (method.fitsContext(context)) {
                         results.add(new CommandMethod.Instance(method, context));
                     }
+
                 } catch (ArgumentParseException exception) {
                     exceptions.add(exception);
                 }
@@ -103,8 +119,15 @@ public class CommandNode {
     Collection<String> completions(CommandSource source, CommandPath input) {
         Set<String> completions = new LinkedHashSet<>();
         for (CommandMethod method : this.methods) {
-            if (method.parameterCount() > input.argIndex()) {
-                CommandParameter parameter = method.parameter(input.argIndex());
+            CommandParameter parameter = null;
+
+            if (method.collect() && input.argIndex() >= method.parameterCount()) {
+                parameter = method.parameter(method.parameterCount() - 1);
+            } else if (method.parameterCount() > input.argIndex()) {
+                parameter = method.parameter(input.argIndex());
+            }
+
+            if (parameter != null) {
                 completions.addAll(parameter.element().complete(source, input.copyState(), new CommandContext()));
             }
         }
