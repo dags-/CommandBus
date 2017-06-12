@@ -32,6 +32,9 @@ import org.spongepowered.api.text.action.*;
 import org.spongepowered.api.text.channel.MessageChannel;
 import org.spongepowered.api.text.channel.MessageReceiver;
 import org.spongepowered.api.text.chat.ChatType;
+import org.spongepowered.api.text.title.Title;
+
+import javax.annotation.Nullable;
 
 /**
  * @author dags <dags@dags.me>
@@ -39,12 +42,18 @@ import org.spongepowered.api.text.chat.ChatType;
 public class Formatter implements TextRepresentable {
 
     private final Format format;
+    private final Formatter parent;
     private final Text.Builder builder = Text.builder();
 
     private boolean empty = true;
 
     Formatter(Format format) {
+        this(null, format);
+    }
+
+    private Formatter(Formatter parent, Format format) {
         this.format = format;
+        this.parent = parent;
     }
 
     public boolean isEmpty() {
@@ -56,6 +65,13 @@ public class Formatter implements TextRepresentable {
             append(Text.NEW_LINE);
         }
         return this;
+    }
+
+    public Formatter subTitle() {
+        if (parent == null) {
+            return new Formatter(this, format);
+        }
+        throw new UnsupportedOperationException("Subtitle Formatter must NOT already have a parent!");
     }
 
     public Formatter action(TextAction action) {
@@ -137,6 +153,30 @@ public class Formatter implements TextRepresentable {
         return toText();
     }
 
+    public Title title() {
+        return title(null, null, null);
+    }
+
+    public Title title(int transition) {
+        return title(transition, transition, transition);
+    }
+
+    public Title title(int fade, int stay) {
+        return title(fade, stay, fade);
+    }
+
+    public Title title(@Nullable Integer fadeIn, @Nullable Integer stay, @Nullable Integer fadeOut) {
+        Text main = parent == null ? this.build() : parent.build();
+        Text sub = parent == null ? null : this.build();
+        return Title.builder()
+                .title(main)
+                .subtitle(sub)
+                .fadeIn(fadeIn)
+                .fadeOut(fadeOut)
+                .stay(stay)
+                .build();
+    }
+
     public Formatter tell(MessageReceiver receiver) {
         receiver.sendMessage(build());
         return this;
@@ -184,6 +224,26 @@ public class Formatter implements TextRepresentable {
 
     public Formatter tellPermitted(String permission) {
         return tell(MessageChannel.permission(permission));
+    }
+
+    public Formatter title(Player... receivers) {
+        return title(null, null, null, receivers);
+    }
+
+    public Formatter title(int fade, Player... receivers) {
+        return title(fade, null, fade, receivers);
+    }
+
+    public Formatter title(int fade, int stay, Player... receivers) {
+        return title(fade, stay, fade, receivers);
+    }
+
+    public Formatter title(@Nullable Integer fadeIn, @Nullable Integer stay, @Nullable Integer fadeOut, Player... receivers) {
+        Title title = title(fadeIn, stay, fadeOut);
+        for (Player player : receivers) {
+            player.sendTitle(title);
+        }
+        return this;
     }
 
     public Formatter log() {
