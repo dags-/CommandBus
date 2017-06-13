@@ -1,0 +1,38 @@
+plugins {
+    id 'com.github.johnrengelman.shadow' version '1.2.4'
+    id 'java'
+}
+
+group 'me.dags'
+version '1.8.0-SNAPSHOT'
+def spongeAPI = '5.2.0'
+def spongeChannel = 'SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'http://repo.spongepowered.org/maven'
+    }
+    maven {
+        url 'https://jitpack.io'
+    }
+}
+
+dependencies {
+    compileOnly "org.spongepowered:spongeapi:${spongeAPI}-${spongeChannel}"
+    compile 'io.github.lukehutch:fast-classpath-scanner:2.0.16'
+    compile 'com.github.dags-:Fmt:0.1'
+}
+
+shadowJar {
+    dependencies {
+        include dependency('io.github.lukehutch:fast-classpath-scanner')
+        include dependency('com.github.dags-:Fmt')
+    }
+    relocate 'me.dags.fmt', 'me.dags.commandbus.fmt'
+    relocate 'io.github.lukehutch.fastclasspathscanner', 'me.dags.commandbus.fcps'
+    archiveName = "${baseName}-${version}-SpongeAPI-${spongeAPI}.jar"
+}
+
+jar.dependsOn shadowJar
+jar.enabled = false

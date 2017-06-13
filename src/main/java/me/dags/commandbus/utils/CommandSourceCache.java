@@ -28,8 +28,8 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
-import me.dags.commandbus.format.FMT;
-import me.dags.commandbus.format.Format;
+import me.dags.fmt.Fmt;
+import me.dags.fmt.Format;
 import org.spongepowered.api.command.CommandSource;
 
 import java.util.Optional;
@@ -127,7 +127,7 @@ public class CommandSourceCache<K extends CommandSource, V> implements RemovalLi
 
         private long expireTime = 60L;
         private TimeUnit timeUnit = TimeUnit.SECONDS;
-        private Format messageFormat = FMT.copy();
+        private Format messageFormat = Fmt.id("global");
         private String addMessage = "";
         private String expireMessage = "";
         private String noElementMessage = "";

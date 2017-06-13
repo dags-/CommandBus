@@ -28,10 +28,8 @@ import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner;
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult;
 import me.dags.commandbus.command.ParameterTypes;
 import me.dags.commandbus.exception.CommandRegistrationException;
-import me.dags.commandbus.format.FMT;
-import me.dags.commandbus.format.Format;
-import me.dags.commandbus.format.FormatSerializer;
-import ninja.leaping.configurate.objectmapping.serialize.TypeSerializers;
+import me.dags.fmt.Fmt;
+import me.dags.fmt.Format;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.api.Sponge;
@@ -54,10 +52,6 @@ import java.util.function.Function;
  * should be registered through the same CommandBus instance, before being submitted.
  */
 public final class CommandBus {
-
-    static {
-        TypeSerializers.getDefaultSerializers().registerType(Format.TYPE_TOKEN, FormatSerializer.INSTANCE);
-    }
 
     private final Registrar registrar = new Registrar(this);
     private final ParameterTypes parameterTypes;
@@ -229,7 +223,7 @@ public final class CommandBus {
 
         private Map<Class<?>, Function<Text, CommandElement>> types = new HashMap<>();
         private Logger logger = LoggerFactory.getLogger(CommandBus.class.getSimpleName());
-        private Format format = FMT.copy();
+        private Format format = Fmt.id("global");
         private boolean logging = true;
 
         public Builder logging(boolean logging) {

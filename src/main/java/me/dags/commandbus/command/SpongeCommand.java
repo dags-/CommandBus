@@ -24,8 +24,8 @@
 
 package me.dags.commandbus.command;
 
-import me.dags.commandbus.format.Format;
-import me.dags.commandbus.format.Formatter;
+import me.dags.fmt.Format;
+import me.dags.fmt.Formatter;
 import org.spongepowered.api.command.CommandCallable;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
@@ -140,9 +140,9 @@ public class SpongeCommand implements CommandCallable {
     @Override
     public Optional<Text> getHelp(CommandSource source) {
         List<Text> usage = root.usage(source);
-        Formatter formatter = format.message();
+        Formatter formatter = format.start();
         for (Text text : usage) {
-            formatter.newLine().append(text);
+            formatter.line().append(text);
         }
         return Optional.of(formatter.build());
     }
