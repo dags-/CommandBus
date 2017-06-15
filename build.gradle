@@ -21,15 +21,12 @@ repositories {
 dependencies {
     compileOnly "org.spongepowered:spongeapi:${spongeAPI}-${spongeChannel}"
     compile 'io.github.lukehutch:fast-classpath-scanner:2.0.16'
-    compile 'com.github.dags-:Fmt:0.1'
 }
 
 shadowJar {
     dependencies {
         include dependency('io.github.lukehutch:fast-classpath-scanner')
-        include dependency('com.github.dags-:Fmt')
     }
-    relocate 'me.dags.fmt', 'me.dags.commandbus.fmt'
     relocate 'io.github.lukehutch.fastclasspathscanner', 'me.dags.commandbus.fcps'
     archiveName = "${baseName}-${version}-SpongeAPI-${spongeAPI}.jar"
 }

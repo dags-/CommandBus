@@ -8,13 +8,11 @@ import java.lang.annotation.Target;
 /**
  * @author dags <dags@dags.me>
  */
-@Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
+@Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Permission {
+public @interface Flag {
 
-    String value();
+    String name();
 
-    String description() default "";
-
-    Assignment assign() default @Assignment(role = "", permit = false);
+    Class<?> type() default boolean.class;
 }

@@ -1,34 +1,13 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) dags <https://dags.me>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-
 package me.dags.commandbus.command;
 
-import me.dags.commandbus.annotation.All;
-import me.dags.commandbus.annotation.Caller;
-import me.dags.commandbus.annotation.Join;
-import me.dags.commandbus.annotation.One;
-import me.dags.commandbus.exception.ParameterAnnotationException;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import me.dags.commandbus.annotation.*;
+import me.dags.commandbus.utils.FlagElement;
+import org.spongepowered.api.command.CommandException;
+import org.spongepowered.api.command.CommandSource;
+import org.spongepowered.api.command.args.CommandArgs;
+import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.text.Text;
@@ -36,79 +15,85 @@ import org.spongepowered.api.text.Text;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * @author dags <dags@dags.me>
- */
-
-/**
- * Used internally by CommandBus to hold information about a Method Parameter.
  */
 class CommandParameter {
 
     private final Text id;
     private final String name;
+    private final String usage;
     private final Class<?> type;
     private final boolean join;
+    private final boolean varargs;
     private final boolean caller;
     private final boolean collect;
+    private final boolean flags;
+    private final int priority;
     private final CommandElement element;
 
-    CommandParameter(ParameterTypes types, Parameter parameter, String id) {
-        if (parameter.isAnnotationPresent(Caller.class)) {
-            this.id = Text.of(id);
-            this.name = "@caller";
-            this.type = parameter.getType();
-            this.join = false;
-            this.caller = true;
-            this.collect = false;
-            this.element = GenericArguments.none();
-        } else if (parameter.isAnnotationPresent(All.class) || Collection.class.equals(parameter.getType())) {
-            if (!Collection.class.equals(parameter.getType())) {
-                String warn = "Parameter %s is annotated with @Collect but is not of type %s";
-                throw new ParameterAnnotationException(warn, parameter.getName(), Collection.class);
-            }
-            All all = parameter.getAnnotation(All.class);
-            ParameterizedType paramT = (ParameterizedType) parameter.getParameterizedType();
-            Class<?> type = (Class<?>) paramT.getActualTypeArguments()[0];
-            this.id = Text.of(id);
-            this.type = type;
-            this.join = false;
-            this.caller = false;
-            this.collect = true;
-            this.element = types.of(type, id);
-            this.name = all != null && !all.value().isEmpty() ? all.value() : type.getSimpleName().toLowerCase();
-            types.typeCheck(type, parameter);
-        } else if (parameter.isAnnotationPresent(Join.class)) {
-            if (!String.class.equals(parameter.getType())) {
-                String warn = "Parameter %s is annotated with @Join but is not of type %s";
-                throw new ParameterAnnotationException(warn, parameter.getName(), String.class);
-            }
-            Join join = parameter.getAnnotation(Join.class);
-            Class<?> type = String.class;
-            this.id = Text.of(id);
-            this.type = type;
-            this.join = true;
-            this.caller = false;
-            this.collect = false;
-            this.name = (join != null && !join.value().isEmpty() ? join.value() : type.getSimpleName().toLowerCase()) + "...";
-            this.element = GenericArguments.remainingJoinedStrings(Text.of(id));
-            types.typeCheck(type, parameter);
-        } else {
-            One one = parameter.getAnnotation(One.class);
-            Class<?> type = parameter.getType();
-            this.id = Text.of(id);
-            this.type = type;
-            this.join = false;
-            this.caller = false;
-            this.collect = false;
-            this.element = types.of(type, id);
-            this.name = one != null && !one.value().isEmpty() ? one.value() : type.getSimpleName().toLowerCase();
-            types.typeCheck(type, parameter);
-        }
+    private CommandParameter(Builder builder) {
+        this.id = builder.id;
+        this.name = builder.name;
+        this.usage = builder.usage;
+        this.type = builder.type;
+        this.join = builder.join;
+        this.varargs = builder.varargs;
+        this.caller = builder.caller;
+        this.collect = builder.collect;
+        this.element = builder.element;
+        this.flags = builder.flag;
+        this.priority = calcPriority();
     }
 
-    Object cast(Object value) {
+    void parse(CommandSource source, CommandArgs args, CommandContext context) throws CommandException {
+        if (caller) {
+            if (!type.isInstance(source)) {
+                String error = String.format("You must be a %s to use this command", type.getSimpleName());
+                throw new CommandException(Text.of(error));
+            }
+        }
+
+        if (varargs) {
+            while (args.hasNext()) {
+                element.parse(source, args, context);
+            }
+            return;
+        }
+
+        element.parse(source, args, context);
+    }
+
+    Object read(CommandSource source, CommandContext context) throws CommandException {
+        if (caller) {
+            return source;
+        }
+
+        if (collect) {
+            return context.getAll(id);
+        }
+
+        if (varargs) {
+            return Iterables.toArray(context.getAll(id), type);
+        }
+
+        Optional<Object> val = context.getOne(id);
+        if (val.isPresent()) {
+            return cast(val.get());
+        }
+
+        if (context.hasAny(id)) {
+            throw new CommandException(Text.of("Parsed multiple possible values for parameter ", id, " but was expecting only one"));
+        }
+
+        return null;
+    }
+
+    private Object cast(Object value) {
         // support lower bit number types than just Integers & Doubles
         if (Number.class.isInstance(value)) {
             return castNumber(value, type);
@@ -116,33 +101,49 @@ class CommandParameter {
         return value;
     }
 
-    Text getId() {
-        return id;
-    }
-
-    Class<?> type() {
-        return type;
-    }
-
-    boolean collect() {
-        return collect;
+    int priority() {
+        return priority;
     }
 
     boolean caller() {
         return caller;
     }
 
-    boolean join() {
-        return join;
+    boolean flags() {
+        return flags;
+    }
+
+    public boolean string() {
+        return type == String.class;
     }
 
     CommandElement element() {
-        return this.element;
+        return element;
+    }
+
+    String usage() {
+        return usage;
     }
 
     @Override
     public String toString() {
         return "<" + name + ">";
+    }
+
+    private int calcPriority() {
+        if (join) {
+            return 4;
+        }
+
+        if (varargs) {
+            return type == String.class ? 3 : 2;
+        }
+
+        if (type == String.class) {
+            return 1;
+        }
+
+        return 0;
     }
 
     private static Object castNumber(Object in, Class<?> type) {
@@ -157,5 +158,169 @@ class CommandParameter {
             return number.byteValue();
         }
         return in;
+    }
+
+    static CommandParameter of(Parameter parameter, TypeIds typeIds, Flags flags) {
+        Builder builder = new Builder(parameter, typeIds, flags);
+
+        Src src = parameter.getAnnotation(Src.class);
+        if (src != null || parameter.getType() == CommandSource.class) {
+            return builder.caller().build();
+        }
+
+        All all = parameter.getAnnotation(All.class);
+        if (all != null || parameter.getType() == Collection.class) {
+            return builder.all(all).build();
+        }
+
+        Var var = parameter.getAnnotation(Var.class);
+        if (var != null || parameter.getType().isArray() || parameter.isVarArgs()) {
+            return builder.var(var).build();
+        }
+
+        Join join = parameter.getAnnotation(Join.class);
+        if (join != null) {
+            return builder.join(join).build();
+        }
+
+        return builder.one(parameter.getAnnotation(One.class)).build();
+    }
+
+    private static class Builder {
+
+        private final Parameter parameter;
+        private final TypeIds typeIds;
+        private final Flags flags;
+
+        private String name = "";
+        private String usage = "";
+        private Text id = Text.EMPTY;
+        private Class<?> type = null;
+        private CommandElement element = GenericArguments.none();
+        private boolean join = false;
+        private boolean caller = false;
+        private boolean collect = false;
+        private boolean varargs = false;
+        private boolean flag = false;
+
+        private Builder(Parameter parameter, TypeIds typeIds, Flags flags) {
+            this.parameter = parameter;
+            this.typeIds = typeIds;
+            this.type = parameter.getType();
+            this.flags = flags;
+        }
+
+        private Builder caller() {
+            if (!CommandSource.class.isAssignableFrom(type)) {
+                throw new IllegalStateException("@Src must decorate a CommandSource parameter");
+            }
+
+            caller = true;
+            type = parameter.getType();
+            return this;
+        }
+
+        private Builder all(All all) {
+            if (Collection.class != type) {
+                throw new IllegalStateException("@All must decorate a Collection parameter");
+            }
+
+            ParameterizedType paramT = (ParameterizedType) parameter.getParameterizedType();
+            type = (Class<?>) paramT.getActualTypeArguments()[0];
+            collect = true;
+            name = all != null && !all.value().isEmpty() ? all.value() : type.getSimpleName().toLowerCase();
+            return this;
+        }
+
+        private Builder var(Var var) {
+            if (!type.isArray()) {
+                throw new IllegalStateException("@Var must decorate an Array or Varargs parameter");
+            }
+
+            varargs = true;
+            type = type.getComponentType();
+            name = var != null && !var.value().isEmpty() ? var.value() : type.getSimpleName().toLowerCase() + "...";
+            return this;
+        }
+
+        private Builder join(Join join) {
+            if (type != String.class) {
+                throw new IllegalStateException("@Join must decorate a String parameter");
+            }
+
+            type = String.class;
+            this.join = true;
+            name = (!join.value().isEmpty() ? join.value() : type.getSimpleName().toLowerCase()) + " ";
+            return this;
+        }
+
+        private Builder one(One one) {
+            name = one != null && !one.value().isEmpty() ? one.value() : type.getSimpleName().toLowerCase();
+            return this;
+        }
+
+        private Map<String, CommandElement> flags() {
+            if (flags == null) {
+                return Collections.emptyMap();
+            }
+
+            ImmutableMap.Builder<String, CommandElement> builder = ImmutableMap.builder();
+            for (Flag flag : flags.value()) {
+                if (flag.type() == boolean.class || flag.type() == Boolean.class) {
+                    String name = "-" + flag.name();
+                    CommandElement element = GenericArguments.none();
+                    builder.put(name, element);
+                } else {
+                    String name = "--" + flag.name();
+                    CommandElement element = ParameterTypes.of(flag.type(), flag.name());
+                    builder.put(name, element);
+                }
+            }
+            return builder.build();
+        }
+
+        private String flagUsage() {
+            if (flags == null) {
+                return "";
+            }
+
+            StringBuilder builder = new StringBuilder();
+            for (Flag flag : flags.value()) {
+                if (flag.type() == boolean.class || flag.type() == Boolean.class) {
+                    String name = "-" + flag.name();
+                    builder.append(builder.length() > 0 ? " | " : "").append(name);
+                } else {
+                    String name = "--" + flag.name();
+                    String type = "<" + flag.type().getSimpleName().toLowerCase() + ">";
+                    builder.append(builder.length() > 0 ? " | " : "").append(name).append(" ").append(type);
+                }
+            }
+            return builder.toString();
+        }
+
+        private CommandParameter build() {
+            String id = typeIds.nextId(type);
+            CommandElement element = GenericArguments.none();
+
+            if (!caller) {
+                ParameterTypes.typeCheck(type, parameter);
+                usage = "<" + name + ">";
+
+                if (join) {
+                    element = GenericArguments.remainingJoinedStrings(Text.of(id));
+                } else if (type == CommandFlags.class){
+                    flag = true;
+                    usage = flagUsage();
+                    element = new FlagElement(Text.of(id), flags());
+                } else {
+                    element = ParameterTypes.of(type, id);
+                }
+            }
+
+            this.id = Text.of(id);
+            this.element = element;
+
+            return new CommandParameter(this);
+        }
     }
 }

@@ -1,27 +1,3 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) dags <https://dags.me>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-
 package me.dags.commandbus;
 
 import me.dags.commandbus.annotation.Assignment;
@@ -29,16 +5,19 @@ import me.dags.commandbus.annotation.Command;
 import me.dags.commandbus.annotation.Permission;
 import me.dags.commandbus.command.CommandMethod;
 import me.dags.commandbus.command.CommandNode;
-import me.dags.commandbus.command.CommandPath;
 import me.dags.commandbus.command.SpongeCommand;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.CommandManager;
 import org.spongepowered.api.command.args.ArgumentParseException;
+import org.spongepowered.api.command.args.CommandArgs;
+import org.spongepowered.api.command.args.parsing.InputTokenizer;
+import org.spongepowered.api.command.args.parsing.SingleArg;
 import org.spongepowered.api.service.permission.PermissionService;
 import org.spongepowered.api.text.Text;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -62,7 +41,7 @@ class Registrar {
             for (Method method : c.getDeclaredMethods()) {
                 if (method.isAnnotationPresent(Command.class)) {
                     try {
-                        CommandMethod commandMethod = new CommandMethod(commandBus.getParameterTypes(), object, method);
+                        CommandMethod commandMethod = new CommandMethod(object, method);
                         CommandNode commandNode = getParentTree(commandMethod.command());
                         commandNode.addAliases(commandMethod.command().alias());
                         commandNode.addCommandMethod(commandMethod);
@@ -89,7 +68,7 @@ class Registrar {
 
         final CommandManager commandManager = Sponge.getCommandManager();
         roots.values().stream()
-                .map(node -> new SpongeCommand(node, commandBus.getFormat()))
+                .map(SpongeCommand::new)
                 .forEach(command -> commandManager.register(plugin, command, command.aliases()));
 
         final PermissionService permissionService = Sponge.getServiceManager().provideUnchecked(PermissionService.class);
@@ -125,10 +104,12 @@ class Registrar {
         if (command.parent().isEmpty()) {
             return getRoot(command.alias()[0]);
         } else {
-            CommandPath input = new CommandPath(command.parent());
-            CommandNode node = getRoot(input.currentState().next());
-            while (input.currentState().hasNext()) {
-                node = node.getOrCreateChild(input.currentState().next());
+            List<SingleArg> list = InputTokenizer.quotedStrings(false).tokenize(command.parent(), true);
+            CommandArgs args = new CommandArgs(command.parent(), list);
+            CommandNode node = getRoot(args.next());
+            while (args.hasNext()) {
+                String next = args.next();
+                node = node.getOrCreateChild(next);
             }
             return node.getOrCreateChild(command.alias()[0]);
         }

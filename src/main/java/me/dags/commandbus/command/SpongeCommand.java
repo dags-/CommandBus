@@ -1,59 +1,32 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) dags <https://dags.me>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-
 package me.dags.commandbus.command;
 
-import me.dags.fmt.Format;
-import me.dags.fmt.Formatter;
 import org.spongepowered.api.command.CommandCallable;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
-import org.spongepowered.api.command.args.ArgumentParseException;
+import org.spongepowered.api.command.args.CommandArgs;
+import org.spongepowered.api.command.args.parsing.InputTokenizer;
+import org.spongepowered.api.command.args.parsing.SingleArg;
 import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.action.TextActions;
+import org.spongepowered.api.text.format.TextColors;
+import org.spongepowered.api.text.format.TextStyles;
 import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * @author dags <dags@dags.me>
  */
 public class SpongeCommand implements CommandCallable {
 
-    private static final String SEE_HELP = "Command not recognised. See '/help %s'";
-
+    private static final InputTokenizer TOKENIZER = InputTokenizer.quotedStrings(false);
     private final CommandNode root;
-    private final Format format;
 
-    public SpongeCommand(CommandNode root, Format format) {
+    public SpongeCommand(CommandNode root) {
         this.root = root;
-        this.format = format;
     }
 
     public List<String> aliases() {
@@ -62,36 +35,33 @@ public class SpongeCommand implements CommandCallable {
 
     @Override
     public CommandResult process(CommandSource source, String rawArgs) throws CommandException {
-        List<ArgumentParseException> exceptions = new ArrayList<>();
-        List<CommandMethod.Instance> commands = new ArrayList<>();
-        root.parse(source, new CommandPath(rawArgs), commands, exceptions);
-        Collections.sort(commands);
+        List<SingleArg> singleArgs = TOKENIZER.tokenize(rawArgs, true);
+        CommandArgs args = new CommandArgs(rawArgs, singleArgs);
+        LinkedList<CommandMethod.Instance> instances = new LinkedList<>();
+        LinkedList<CommandException> exceptions = new LinkedList<>();
 
-        if (commands.isEmpty()) {
+        root.parse(source, args, singleArgs.size(), instances, exceptions);
+        if (instances.isEmpty()) {
             if (exceptions.isEmpty()) {
-                String alias = aliases().get(0);
-                Text help = getHelp(source).orElse(format.error(SEE_HELP, alias).build());
-                throw new CommandException(help);
-            } else {
-                throw exceptions.get(exceptions.size() - 1);
+                throw new CommandException(Text.of("Command not recognized for input '" + rawArgs + "'"));
             }
+            throw exceptions.getLast();
         }
 
-        InvokeResult result = InvokeResult.EMPTY;
-        for (CommandMethod.Instance instance : commands) {
-            InvokeResult test = instance.invoke(source);
-            if (test == InvokeResult.SUCCESS) {
+        Collections.sort(instances);
+        Exception exception = null;
+        for (CommandMethod.Instance instance : instances) {
+            try {
+                instance.invoke(source);
                 return CommandResult.success();
+            } catch (Exception e) {
+                e.printStackTrace();
+                exception = e;
             }
-            result = result.or(test);
         }
 
-        if (result == InvokeResult.UNKNOWN) {
-            throw new CommandException(format.warn(result.message()).build());
-        }
-
-        if (result == InvokeResult.NO_PERM) {
-            throw new CommandException(format.error(result.message()).build());
+        if (exception != null) {
+            throw new CommandException(Text.of("An error occurred whilst executing the command"), exception);
         }
 
         return CommandResult.empty();
@@ -99,32 +69,11 @@ public class SpongeCommand implements CommandCallable {
 
     @Override
     public List<String> getSuggestions(CommandSource source, String arguments, @Nullable Location<World> location) throws CommandException {
-        List<String> suggestions = new ArrayList<>();
-
-        CommandPath input = new CommandPath(arguments);
-        CommandNode node = root, previous = node;
-        String lastArg = "";
-
-        while (input.currentState().hasNext()) {
-            node = node.getChild(lastArg = input.currentState().peek());
-            if (node == null) {
-                break;
-            }
-            previous = node;
-            input.currentState().next();
-        }
-
-        if (node == null) {
-            node = previous;
-            suggestions.addAll(node.suggestions(lastArg));
-        }
-
-        if (suggestions.isEmpty()) {
-            input = input.trim();
-            node.completions(source, input).forEach(suggestions::add);
-        }
-
-        return suggestions;
+        Set<String> suggestions = new LinkedHashSet<>();
+        List<SingleArg> singleArgs = TOKENIZER.tokenize(arguments, true);
+        CommandArgs args = new CommandArgs(arguments, singleArgs);
+        root.suggest(source, args, singleArgs.size(), suggestions);
+        return new ArrayList<>(suggestions);
     }
 
     @Override
@@ -134,21 +83,40 @@ public class SpongeCommand implements CommandCallable {
 
     @Override
     public Optional<Text> getShortDescription(CommandSource source) {
-        return Optional.empty();
+        String command = "/help " + root.getAlias();
+        Text.Builder builder = Text.builder();
+        builder.append(Text.of("See "));
+        builder.append(Text.builder(command)
+                .color(TextColors.GREEN)
+                .style(TextStyles.UNDERLINE)
+                .onClick(TextActions.runCommand(command)).build());
+        builder.append(Text.of(" for more info"));
+        builder.onHover(TextActions.showText(generateHelp(source)));
+        return Optional.of(builder.build());
     }
 
     @Override
     public Optional<Text> getHelp(CommandSource source) {
-        List<Text> usage = root.usage(source);
-        Formatter formatter = format.start();
-        for (Text text : usage) {
-            formatter.line().append(text);
-        }
-        return Optional.of(formatter.build());
+        return Optional.of(generateHelp(source));
     }
 
     @Override
     public Text getUsage(CommandSource source) {
-        return Text.EMPTY;
+        return Text.of("USE", Text.NEW_LINE, "AGAIN");
+    }
+
+    private Text generateHelp(CommandSource source) {
+        List<Text> help = new LinkedList<>();
+        root.populateHelp(source, "/", help);
+        Text.Builder builder = Text.builder();
+        boolean first = true;
+        for (Text line : help) {
+            if (!first) {
+                builder.append(Text.NEW_LINE);
+            }
+            builder.append(line);
+            first = false;
+        }
+        return builder.build();
     }
 }

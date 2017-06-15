@@ -1,42 +1,19 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) dags <https://dags.me>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-
 package me.dags.commandbus.command;
 
-import me.dags.commandbus.annotation.Assignment;
-import me.dags.commandbus.annotation.Command;
-import me.dags.commandbus.annotation.Description;
-import me.dags.commandbus.annotation.Permission;
+import com.google.common.collect.ImmutableList;
+import me.dags.commandbus.annotation.*;
+import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandSource;
+import org.spongepowered.api.command.args.ArgumentParseException;
+import org.spongepowered.api.command.args.CommandArgs;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
-import org.spongepowered.api.command.args.GenericArguments;
-import org.spongepowered.api.util.Tristate;
+import org.spongepowered.api.text.Text;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.Optional;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * @author dags <dags@dags.me>
@@ -49,42 +26,59 @@ public class CommandMethod {
     private final Description description;
     private final Object owner;
     private final Method target;
-    private final CommandElement element;
-    private final CommandParameter[] parameters;
+    private final List<CommandParameter> parameters;
 
-    private final boolean collect;
-    private final boolean join;
+    private final int priority;
     private final int argCount;
+    private final boolean variable;
 
-    public CommandMethod(ParameterTypes types, Object owner, Method target) {
+    public CommandMethod(Object owner, Method target) {
+        Flags flags = target.getAnnotation(Flags.class);
         Command command = target.getAnnotation(Command.class);
         Permission permission = target.getAnnotation(Permission.class);
         Assignment assignment = target.getAnnotation(Assignment.class);
         Description description = target.getAnnotation(Description.class);
 
+        TypeIds typeIds = new TypeIds();
+        ImmutableList.Builder<CommandParameter> builder = ImmutableList.builder();
+        for (Parameter parameter : target.getParameters()) {
+            builder.add(CommandParameter.of(parameter, typeIds, flags));
+        }
+        List<CommandParameter> parameters = builder.build();
+
+        int argCount = 0;
+        int priority = 0;
+        boolean variable = false;
+        for (CommandParameter parameter : parameters) {
+            priority = Math.max(priority, parameter.priority());
+            if (parameter.caller()) {
+                continue;
+            }
+            if (parameter.flags()) {
+                variable = true;
+                continue;
+            }
+            argCount++;
+        }
+
         this.owner = owner;
         this.target = target;
         this.command = command;
-        this.parameters = getParameters(types, target);
+        this.priority = priority;
+        this.argCount = argCount;
+        this.variable = variable || priority > 1;
+        this.parameters = parameters;
         this.permission = permission != null ? permission : command.permission();
         this.assignment = assignment != null ? assignment : (!this.permission.assign().role().isEmpty() ? this.permission.assign() : command.assign());
         this.description = description != null ? description : command.description();
-
-        CommandElement[] elements = toElements(parameters);
-        this.element = elements.length == 0 ? GenericArguments.none() : GenericArguments.seq(elements);
-        this.argCount = elements.length;
-        boolean join = false;
-        boolean collect = false;
-        for (CommandParameter parameter : parameters) {
-            join = join || parameter.join();
-            collect = collect || parameter.collect();
-        }
-        this.join = join;
-        this.collect = collect;
     }
 
     public Command command() {
         return command;
+    }
+
+    public Description description() {
+        return description;
     }
 
     public Permission permission() {
@@ -95,169 +89,111 @@ public class CommandMethod {
         return assignment;
     }
 
-    public String description() {
-        return description.value().isEmpty() ? usage() : description.value();
-    }
-
-    @Override
-    public String toString() {
-        String command = command().alias()[0] + " " + usage();
-        return command().parent().isEmpty() ? command : command().parent() + " " + command;
-    }
-
-    boolean join() {
-        return join;
-    }
-
-    boolean collect() {
-        return collect;
-    }
-
-    int parameterCount() {
-        return argCount;
-    }
-
-    CommandParameter parameter(int index) {
-        if (parameterCount() < parameters.length) {
-            index += 1;
-        }
-        return parameters[index];
-    }
-
-    CommandElement elements() {
-        return element;
-    }
-
     String usage() {
         StringBuilder builder = new StringBuilder();
-        boolean first = true;
         for (CommandParameter parameter : parameters) {
-            if (!parameter.caller()) {
-                builder.append(first ? "" : " ").append(parameter);
-                first = false;
+            if (parameter.caller()) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append(" ");
+            }
+            if (parameter.flags()) {
+                builder.append("(");
+            }
+
+            builder.append(parameter.usage());
+
+            if (parameter.flags()) {
+                builder.append(")");
             }
         }
         return builder.toString();
     }
 
-    boolean fitsContext(CommandContext context) {
+    Instance parse(CommandSource source, CommandArgs args, int remaining) throws CommandException {
+        if (remaining < argCount) {
+            throw args.createError(Text.of("Not enough arguments"));
+        }
+
+        if (remaining > argCount && !variable) {
+            throw args.createError(Text.of("Too many arguments"));
+        }
+
+        CommandContext context = new CommandContext();
         for (CommandParameter parameter : parameters) {
-            if (parameter.caller()) {
-                continue;
-            }
-            if (parameter.collect()) {
-                continue;
-            }
-            Optional<?> optional = context.getOne(parameter.getId());
-            if (!optional.isPresent()) {
-                return false;
-            }
+            parameter.parse(source, args, context);
         }
-        return true;
+
+        return new Instance(context);
     }
 
-    boolean fitsCaller(CommandSource source) {
+    void suggest(CommandSource source, CommandArgs args, int remaining, Collection<String> suggestions) throws ArgumentParseException {
+        if (remaining < argCount) {
+            return;
+        }
+
+        CommandContext dummy = new CommandContext();
         for (CommandParameter parameter : parameters) {
-            if (parameter.caller() && !parameter.type().isInstance(source)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    String callerType() {
-        for (CommandParameter parameter : parameters) {
-            if (parameter.caller()) {
-                return parameter.type().getSimpleName();
-            }
-        }
-        return "?";
-    }
-
-    void invoke(CommandSource source, CommandContext context) throws Exception {
-        Object[] args = new Object[parameters.length];
-        for (int i = 0; i < parameters.length; i++) {
-            CommandParameter parameter = parameters[i];
-            if (parameter.caller()) {
-                args[i] = source;
-                continue;
-            }
-            if (parameter.collect()) {
-                args[i] = context.getAll(parameter.getId());
-                continue;
-            }
-            Optional<?> arg = context.getOne(parameter.getId());
-            if (arg.isPresent()) {
-                args[i] = parameter.cast(arg.get());
-            } else {
-                return;
-            }
-        }
-        target.invoke(owner, args);
-    }
-
-    private static CommandParameter[] getParameters(ParameterTypes parameterTypes, Method method) {
-        Parameter[] parameters = method.getParameters();
-        CommandParameter[] commandParameters = new CommandParameter[parameters.length];
-        for (int i = 0; i < parameters.length; i++) {
-            commandParameters[i] = new CommandParameter(parameterTypes, parameters[i], "#" + i);
-        }
-        return commandParameters;
-    }
-
-    private static CommandElement[] toElements(CommandParameter[] parameters) {
-        int callers = 0;
-        for (CommandParameter parameter : parameters) {
-            if (parameter.caller()) {
-                callers++;
-            }
-        }
-        CommandElement[] elements = new CommandElement[parameters.length - callers];
-        for (int i = 0, j = 0; i < elements.length && j < parameters.length; j++) {
-            CommandParameter parameter = parameters[j];
-            if (parameter.caller()) {
-                continue;
-            }
-            elements[i++] = parameter.element();
-        }
-        return elements;
-    }
-
-    static class Instance implements Comparable<Instance> {
-
-        private final CommandMethod method;
-        private final CommandContext commandContext;
-
-        Instance(CommandMethod method, CommandContext commandContext) {
-            this.method = method;
-            this.commandContext = commandContext;
-        }
-
-        InvokeResult invoke(CommandSource source) {
-            if (!method.fitsCaller(source)) {
-                return InvokeResult.of(Tristate.FALSE, "You must be a " + method.callerType() + " to use this command");
-            }
-            if (!method.permission.value().isEmpty() && !source.hasPermission(method.permission.value())) {
-                return InvokeResult.NO_PERM;
-            }
+            CommandElement element = parameter.element();
+            Object startState = args.getState();
             try {
-                method.invoke(source, commandContext);
-                return InvokeResult.SUCCESS;
-            } catch (Exception e) {
-                e.printStackTrace();
-                return InvokeResult.UNKNOWN;
+                element.parse(source, args, dummy);
+                Object endState = args.getState();
+                if (!args.hasNext()) {
+                    args.setState(startState);
+                    List<String> list = element.complete(source, args, dummy);
+                    args.setState(Math.max(-1, (int) args.getState() - 1));
+                    if (!list.contains(args.next())) {
+                        suggestions.addAll(list);
+                        return;
+                    }
+                    args.setState(endState);
+                }
+            } catch (ArgumentParseException e) {
+                args.setState(startState);
+                List<String> list = element.complete(source, args, dummy);
+                suggestions.addAll(list);
             }
+        }
+    }
+
+    class Instance implements Comparable<Instance> {
+
+        private final CommandContext context;
+        private final int length = CommandMethod.this.argCount;
+        private final int priority = CommandMethod.this.priority;
+
+        private Instance(CommandContext context) {
+            this.context = context;
+        }
+
+        void invoke(CommandSource source) throws Exception {
+            Object[] args = new Object[parameters.size()];
+
+            for (int i = 0 ; i < parameters.size(); i++) {
+                CommandParameter parameter = parameters.get(i);
+                Object value = parameter.read(source, context);
+                if (value == null) {
+                    throw new CommandException(Text.of("Missing parameter " + parameter));
+                }
+                args[i] = value;
+            }
+
+            target.invoke(owner, args);
         }
 
         @Override
-        public int compareTo(Instance in) {
-            return method.join ? 2 : method.parameterCount() > in.method.parameterCount() ? 1 : -1;
+        public int compareTo(Instance instance) {
+            if (priority != instance.priority) {
+                return priority > instance.priority ? 1 : -1;
+            }
+            return length > instance.length ? 1 : instance.length > length ? -1 : 0;
         }
 
         @Override
         public String toString() {
-            String string = method.command().alias()[0] + " " + method.usage();
-            return method.command().parent().isEmpty() ? string : method.command().parent() + " " + string;
+            return command.parent() + " " + command.alias()[0] + ":" + target.getName();
         }
     }
 }

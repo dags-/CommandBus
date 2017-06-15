@@ -1,7 +1,8 @@
 package me.dags.commandbus.command;
 
 import com.flowpowered.math.vector.Vector3d;
-import me.dags.commandbus.exception.ParameterAnnotationException;
+import com.google.common.collect.ImmutableMap;
+import me.dags.commandbus.utils.CatalogElement;
 import org.spongepowered.api.CatalogType;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.GenericArguments;
@@ -12,7 +13,6 @@ import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
 
 import java.lang.reflect.Parameter;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -20,11 +20,11 @@ import java.util.function.Function;
 /**
  * @author dags <dags@dags.me>
  */
-public class ParameterTypes {
+class ParameterTypes {
 
-    private static final Map<Class<?>, Function<String, CommandElement>> types = init();
+    private static final Map<Class<?>, Function<String, CommandElement>> types;
 
-    private static Map<Class<?>, Function<String, CommandElement>> init() {
+    static {
         Map<Class<?>, Function<String, CommandElement>> map = new HashMap<>();
         map.put(boolean.class, s -> GenericArguments.bool(Text.of(s)));
         map.put(Boolean.class, map.get(boolean.class));
@@ -39,51 +39,39 @@ public class ParameterTypes {
         map.put(long.class, map.get(int.class));
         map.put(Long.class, map.get(long.class));
         map.put(short.class, s -> GenericArguments.integer(Text.of(s)));
-        map.put(Short.class, map.get(Short.class));
+        map.put(Short.class, map.get(short.class));
         map.put(Location.class, s -> GenericArguments.location(Text.of(s)));
         map.put(Player.class, s -> GenericArguments.player(Text.of(s)));
         map.put(String.class, s -> GenericArguments.string(Text.of(s)));
         map.put(User.class, s -> GenericArguments.user(Text.of(s)));
         map.put(Vector3d.class, s -> GenericArguments.vector3d(Text.of(s)));
         map.put(World.class, s -> GenericArguments.world(Text.of(s)));
-        return Collections.unmodifiableMap(map);
+        types = ImmutableMap.copyOf(map);
     }
 
-    private final Map<Class<?>, Function<Text, CommandElement>> custom;
-
-    public ParameterTypes() {
-        this.custom = Collections.emptyMap();
-    }
-
-    public ParameterTypes(Map<Class<?>, Function<Text, CommandElement>> custom) {
-        this.custom = Collections.unmodifiableMap(custom);
-    }
-
-    public void typeCheck(Class<?> type, Parameter source) {
+    static void typeCheck(Class<?> type, Parameter source) {
         if (!validParameterType(type)) {
             String warn = "Parameter %s is not supported a supported type %s!";
-            throw new ParameterAnnotationException(warn, source, type);
+            String message = String.format(warn, source, type);
+            throw new IllegalArgumentException(message);
         }
     }
 
-    public boolean validParameterType(Class<?> type) {
-        return types.containsKey(type) || custom.containsKey(type)
+    private static boolean validParameterType(Class<?> type) {
+        return types.containsKey(type)
                 || CatalogType.class.isAssignableFrom(type)
-                || Enum.class.isAssignableFrom(type);
+                || Enum.class.isAssignableFrom(type)
+                || CommandFlags.class == type;
     }
 
     @SuppressWarnings("unchecked")
-    public CommandElement of(Class<?> type, String key) {
+    static CommandElement of(Class<?> type, String key) {
         Function<String, CommandElement> f1 = types.get(type);
         if (f1 != null) {
             return f1.apply(key);
         }
-        Function<Text, CommandElement> f2 = custom.get(type);
-        if (f2 != null) {
-            return f2.apply(Text.of(key));
-        }
         if (CatalogType.class.isAssignableFrom(type)) {
-            return GenericArguments.catalogedElement(Text.of(key), (Class<? extends CatalogType>) type);
+            return new CatalogElement<>((Class<? extends CatalogType>) type, Text.of(key));
         }
         if (Enum.class.isAssignableFrom(type)) {
             return GenericArguments.enumValue(Text.of(key), (Class<? extends Enum>) type);

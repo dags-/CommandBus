@@ -1,39 +1,14 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) dags <https://dags.me>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-
 package me.dags.commandbus.command;
 
+import me.dags.commandbus.annotation.Description;
+import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.ArgumentParseException;
 import org.spongepowered.api.command.args.CommandArgs;
-import org.spongepowered.api.command.args.CommandContext;
-import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.text.Text;
-import org.spongepowered.api.text.action.TextActions;
+import org.spongepowered.api.text.format.TextColors;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * @author dags <dags@dags.me>
@@ -44,6 +19,10 @@ public class CommandNode {
     private final Set<String> aliases = new LinkedHashSet<>();
     private final Set<CommandNode> children = new HashSet<>();
     private final Set<CommandMethod> methods = new HashSet<>();
+
+    public void addCommandMethod(CommandMethod method) {
+        methods.add(method);
+    }
 
     public CommandNode(String... aliases) {
         main = aliases[0];
@@ -64,6 +43,10 @@ public class CommandNode {
         return node;
     }
 
+    String getAlias() {
+        return main;
+    }
+
     CommandNode getChild(String node) {
         for (CommandNode child : children) {
             if (child.matches(node)) {
@@ -73,92 +56,99 @@ public class CommandNode {
         return null;
     }
 
-    void parse(CommandSource source, CommandPath input, List<CommandMethod.Instance> results, List<ArgumentParseException> exceptions) {
+    void parse(CommandSource source, CommandArgs args, int length, List<CommandMethod.Instance> results, List<CommandException> errors) {
+        int state = (int) args.getState();
+        int remaining = length - state - 1;
+
         for (CommandMethod method : this.methods) {
-            boolean withinBound = input.remaining() == method.parameterCount();
-            boolean join = method.join() && input.remaining() >= method.parameterCount();
-            boolean collect = method.collect() && input.remaining() >= method.parameterCount();
-
-            if (withinBound || join || collect) {
+            if (test(source, method)) {
                 try {
-                    CommandArgs commandArgs = input.copyState();
-                    CommandContext context = new CommandContext();
-                    CommandElement element = method.elements();
-
-                    if (collect) {
-                        element = method.parameter(method.parameterCount() - 1).element();
-                        while (commandArgs.hasNext()) {
-                            element.parse(source, commandArgs, context);
-                        }
-                    } else {
-                        element.parse(source, commandArgs, context);
-                    }
-
-                    if (method.fitsContext(context)) {
-                        results.add(new CommandMethod.Instance(method, context));
-                    }
-
-                } catch (ArgumentParseException exception) {
-                    exceptions.add(exception);
+                    args.setState(state);
+                    CommandMethod.Instance instance = method.parse(source, args, remaining);
+                    results.add(instance);
+                } catch (CommandException e) {
+                    errors.add(e);
                 }
+            } else {
+                errors.add(new CommandException(Text.of("You do not have permission to use this command")));
             }
         }
 
-        if (input.currentState().hasNext()) {
-            try {
-                CommandNode child = getChild(input.currentState().next());
-                if (child != null) {
-                    child.parse(source, input, results, exceptions);
-                }
-            } catch (ArgumentParseException exception) {
-                exceptions.add(exception);
+        args.setState(state);
+        Optional<String> next = args.nextIfPresent();
+
+        if (next.isPresent()) {
+            CommandNode node = getChild(next.get());
+            if (node != null) {
+                node.parse(source, args, length, results, errors);
             }
         }
     }
 
-    Collection<String> completions(CommandSource source, CommandPath input) {
-        Set<String> completions = new LinkedHashSet<>();
-        for (CommandMethod method : this.methods) {
-            CommandParameter parameter = null;
+    void suggest(CommandSource source, CommandArgs args, int length, Collection<String> suggestions) throws ArgumentParseException {
+        int state = (int) args.getState();
+        int remaining = length - state - 1;
 
-            if (method.collect() && input.argIndex() >= method.parameterCount()) {
-                parameter = method.parameter(method.parameterCount() - 1);
-            } else if (method.parameterCount() > input.argIndex()) {
-                parameter = method.parameter(input.argIndex());
-            }
+        String next = args.next();
+        CommandNode child = getChild(next);
 
-            if (parameter != null) {
-                completions.addAll(parameter.element().complete(source, input.copyState(), new CommandContext()));
+        if (child != null) {
+            child.suggest(source, args, remaining, suggestions);
+            return;
+        }
+
+        for (CommandMethod method : methods) {
+            if (test(source, method)) {
+                args.setState(state);
+                method.suggest(source, args, remaining, suggestions);
             }
         }
-        return completions;
+
+        args.setState(state);
+        for (CommandNode node : children) {
+            if (node.testPermission(source)) {
+                for (String alias : node.aliases) {
+                    if (alias.startsWith(next) && alias.length() > next.length()) {
+                        suggestions.add(alias);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    void populateHelp(CommandSource source, String parent, List<Text> help) {
+        String node = parent.equals("/") ? parent + main : parent + " " + main;
+
+        for (CommandMethod method : methods) {
+            if (!test(source, method)) {
+                continue;
+            }
+
+            String usage = node + " " + method.usage();
+            Description description = method.description();
+            Text.Builder builder = Text.builder(usage)
+                    .color(TextColors.YELLOW);
+
+            if (!description.value().isEmpty()) {
+                builder.append(Text.builder(" - " + description.value()).color(TextColors.WHITE).build());
+            }
+
+            help.add(builder.build());
+        }
+
+        for (CommandNode child : children) {
+            child.populateHelp(source, node, help);
+        }
     }
 
     List<String> aliases() {
         return new ArrayList<>(aliases);
     }
 
-    List<String> suggestions(String match) {
-        List<String> list = new ArrayList<>();
-        for (CommandNode child : this.children) {
-            for (String s : child.aliases) {
-                if (s.startsWith(match)) {
-                    list.add(s);
-                }
-            }
-        }
-        return list;
-    }
-
-    List<Text> usage(CommandSource source) {
-        Set<Text> set = new HashSet<>();
-        usage(source, "/" + main, set);
-        return set.stream().sorted().collect(Collectors.toList());
-    }
-
     boolean testPermission(CommandSource source) {
         for (CommandMethod method : methods) {
-            if (method.permission().value().isEmpty() || source.hasPermission(method.permission().value())) {
+            if (test(source, method)) {
                 return true;
             }
         }
@@ -170,28 +160,11 @@ public class CommandNode {
         return false;
     }
 
+    private boolean test(CommandSource source, CommandMethod method) {
+        return method.permission().value().isEmpty() || source.hasPermission(method.permission().value());
+    }
+
     private boolean matches(String alias) {
         return aliases.contains(alias);
-    }
-
-    private void usage(CommandSource source, String parent, Set<Text> set) {
-        for (CommandMethod method : methods) {
-            if (method.permission().value().isEmpty() || source.hasPermission(method.permission().value())) {
-                String line = parent + " " + method.usage();
-                Text description = Text.of(method.description());
-                Text usage = Text.builder(line)
-                        .onHover(TextActions.showText(description))
-                        .onClick(TextActions.suggestCommand(line))
-                        .build();
-                set.add(usage);
-            }
-        }
-        for (CommandNode child : children) {
-            child.usage(source, parent + " " + child.main, set);
-        }
-    }
-
-    public void addCommandMethod(CommandMethod method) {
-        methods.add(method);
     }
 }
