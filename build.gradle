@@ -19,7 +19,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly "org.spongepowered:spongeapi:${spongeAPI}-${spongeChannel}"
+    compile "org.spongepowered:spongeapi:${spongeAPI}-$spongeChannel"
     compile 'io.github.lukehutch:fast-classpath-scanner:2.0.16'
 }
 
