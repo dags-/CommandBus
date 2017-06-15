@@ -28,7 +28,7 @@ shadowJar {
         include dependency('io.github.lukehutch:fast-classpath-scanner')
     }
     relocate 'io.github.lukehutch.fastclasspathscanner', 'me.dags.commandbus.fcps'
-    archiveName = "${baseName}-${version}-SpongeAPI-${spongeAPI}.jar"
+    archiveName = "${baseName}-${version}.jar"
 }
 
 jar.dependsOn shadowJar
