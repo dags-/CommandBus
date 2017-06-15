@@ -28,8 +28,7 @@ shadowJar {
         include dependency('io.github.lukehutch:fast-classpath-scanner')
     }
     relocate 'io.github.lukehutch.fastclasspathscanner', 'me.dags.commandbus.fcps'
-    archiveName = "${baseName}-${version}.jar"
+    classifier=null
 }
 
-jar.dependsOn shadowJar
-jar.enabled = false
+build.dependsOn shadowJar
