@@ -84,13 +84,6 @@ public class CommandMethod {
         return permission;
     }
 
-    public String commandString() {
-        if (command.parent().isEmpty()) {
-            return String.format("%s %s", command.alias()[0], usage());
-        }
-        return String.format("%s %s %s", command.parent(), command.alias()[0], usage());
-    }
-
     String usage() {
         StringBuilder builder = new StringBuilder();
         for (CommandParameter parameter : parameters) {
@@ -202,10 +195,14 @@ public class CommandMethod {
     private Permission buildPermission(String id, Command command, Permission permission, Assignment assignment) {
         Permission perm = permission != null ? permission : command.permission();
         Assignment assign = assignment != null ? assignment : permission != null ? permission.assign() : command.assign();
-        String node = perm.value();
 
+        String node = perm.value();
         if (node.isEmpty() && permission != null) {
-            node = (id + '.' + command.parent() + "." + command.alias()[0]).replace(' ', '.');
+            if (command.parent().isEmpty()) {
+                node = String.format("%s.%s", id, command.alias()[0]).replace(' ', '.');
+            } else {
+                node = String.format("%s.%s.%s", id, command.parent(), command.alias()[0]).replace(' ', '.');
+            }
         }
 
         final String permNode = node;

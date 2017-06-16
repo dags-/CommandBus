@@ -17,8 +17,10 @@ import org.spongepowered.api.text.Text;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author dags <dags@dags.me>
@@ -26,7 +28,7 @@ import java.util.Map;
 class Registrar {
 
     private final Map<String, CommandNode> roots = new HashMap<>();
-    private final Map<String, Permission> permissions = new HashMap<>();
+    private final List<CommandMethod> methods = new LinkedList<>();
     private final CommandBus commandBus;
     private boolean submitted = false;
 
@@ -45,10 +47,7 @@ class Registrar {
                         CommandNode commandNode = getParentTree(commandMethod.command());
                         commandNode.addAliases(commandMethod.command().alias());
                         commandNode.addCommandMethod(commandMethod);
-                        Permission permission = commandMethod.permission();
-                        if (!permission.value().isEmpty()) {
-                            permissions.put(commandMethod.commandString(), permission);
-                        }
+                        methods.add(commandMethod);
                         count++;
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -73,21 +72,28 @@ class Registrar {
                 .forEach(command -> commandManager.register(instance, command, command.aliases()));
 
         final PermissionService permissionService = Sponge.getServiceManager().provideUnchecked(PermissionService.class);
-        permissions.values().forEach(permission -> permissionService.newDescriptionBuilder(instance).ifPresent(builder -> {
-            Assignment assignment = permission.assign();
-            builder.id(permission.value());
-            builder.description(Text.of(permission.description()));
-            if (!assignment.role().isEmpty()) {
-                builder.assign(assignment.role(), assignment.permit());
-            }
-            builder.register();
-        }));
+        final AtomicInteger counter = new AtomicInteger(0);
+        methods.stream()
+                .filter(method -> !method.permission().value().isEmpty())
+                .forEach(method -> permissionService.newDescriptionBuilder(instance).ifPresent(builder -> {
+                    Permission permission = method.permission();
+                    Assignment assignment = permission.assign();
+                    builder.id(permission.value());
+                    builder.description(Text.of(permission.description()));
+                    if (!assignment.role().isEmpty()) {
+                        builder.assign(assignment.role(), assignment.permit());
+                    }
+                    builder.register();
+                    counter.getAndAdd(1);
+                }));
+
+        // todo generate markdown usage/perm docs under config/commandbus/<plugin_id>.md ??
 
         commandBus.info("Registered {} main commands", roots.size());
-        commandBus.info("Registered {} permissions", permissions.size());
+        commandBus.info("Registered {} permissions", counter.get());
 
         roots.clear();
-        permissions.clear();
+        methods.clear();
 
         submitted = true;
     }
