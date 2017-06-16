@@ -1,8 +1,9 @@
 plugins {
     id 'com.github.johnrengelman.shadow' version '1.2.4'
-    id 'java'
-    id 'maven'
 }
+
+apply plugin: 'java'
+apply plugin: 'maven'
 
 group 'me.dags'
 version '1.8.0-SNAPSHOT'
@@ -32,8 +33,13 @@ shadowJar {
     }
     relocate 'io.github.lukehutch.fastclasspathscanner', 'me.dags.commandbus.fcps'
     relocate 'me.dags.fmt', 'me.dags.commandbus.fmt'
-    classifier=null
+    classifier = null
 }
 
 jar.dependsOn shadowJar
 jar.enabled = false
+
+// exclude dependencies since they're shadowed into the jar already
+install.repositories.mavenInstaller.pom.whenConfigured { pom ->
+    pom.dependencies.removeAll { it.scope == "compile" }
+}
