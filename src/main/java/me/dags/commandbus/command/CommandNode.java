@@ -127,8 +127,7 @@ public class CommandNode {
 
             String usage = node + " " + method.usage();
             Description description = method.description();
-            Text.Builder builder = Text.builder(usage)
-                    .color(TextColors.YELLOW);
+            Text.Builder builder = Text.builder(usage).color(TextColors.YELLOW);
 
             if (!description.value().isEmpty()) {
                 builder.append(Text.builder(" - " + description.value()).color(TextColors.WHITE).build());

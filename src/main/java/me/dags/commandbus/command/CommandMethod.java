@@ -10,6 +10,7 @@ import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.text.Text;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Collection;
@@ -22,7 +23,6 @@ public class CommandMethod {
 
     private final Command command;
     private final Permission permission;
-    private final Assignment assignment;
     private final Description description;
     private final Object owner;
     private final Method target;
@@ -32,7 +32,7 @@ public class CommandMethod {
     private final int argCount;
     private final boolean variable;
 
-    public CommandMethod(Object owner, Method target) {
+    public CommandMethod(String pluginId, Object owner, Method target) {
         Flags flags = target.getAnnotation(Flags.class);
         Command command = target.getAnnotation(Command.class);
         Permission permission = target.getAnnotation(Permission.class);
@@ -68,8 +68,7 @@ public class CommandMethod {
         this.argCount = argCount;
         this.variable = variable || priority > 1;
         this.parameters = parameters;
-        this.permission = permission != null ? permission : command.permission();
-        this.assignment = assignment != null ? assignment : (!this.permission.assign().role().isEmpty() ? this.permission.assign() : command.assign());
+        this.permission = buildPermission(pluginId, command, permission, assignment);
         this.description = description != null ? description : command.description();
     }
 
@@ -85,8 +84,11 @@ public class CommandMethod {
         return permission;
     }
 
-    public Assignment assignment() {
-        return assignment;
+    public String commandString() {
+        if (command.parent().isEmpty()) {
+            return String.format("%s %s", command.alias()[0], usage());
+        }
+        return String.format("%s %s %s", command.parent(), command.alias()[0], usage());
     }
 
     String usage() {
@@ -195,5 +197,41 @@ public class CommandMethod {
         public String toString() {
             return command.parent() + " " + command.alias()[0] + ":" + target.getName();
         }
+    }
+
+    private Permission buildPermission(String id, Command command, Permission permission, Assignment assignment) {
+        Permission perm = permission != null ? permission : command.permission();
+        Assignment assign = assignment != null ? assignment : permission != null ? permission.assign() : command.assign();
+        String node = perm.value();
+
+        if (node.isEmpty() && permission != null) {
+            node = (id + '.' + command.parent() + "." + command.alias()[0]).replace(' ', '.');
+        }
+
+        final String permNode = node;
+        final String permDesc = perm.description();
+        final Assignment permAssign = assign;
+
+        return new Permission(){
+            @Override
+            public Class<? extends Annotation> annotationType() {
+                return Permission.class;
+            }
+
+            @Override
+            public String value() {
+                return permNode;
+            }
+
+            @Override
+            public String description() {
+                return permDesc;
+            }
+
+            @Override
+            public Assignment assign() {
+                return permAssign;
+            }
+        };
     }
 }

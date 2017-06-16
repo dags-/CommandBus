@@ -26,7 +26,7 @@ import java.util.Map;
 class Registrar {
 
     private final Map<String, CommandNode> roots = new HashMap<>();
-    private final Map<Permission, Assignment> permissions = new HashMap<>();
+    private final Map<String, Permission> permissions = new HashMap<>();
     private final CommandBus commandBus;
     private boolean submitted = false;
 
@@ -41,14 +41,13 @@ class Registrar {
             for (Method method : c.getDeclaredMethods()) {
                 if (method.isAnnotationPresent(Command.class)) {
                     try {
-                        CommandMethod commandMethod = new CommandMethod(object, method);
+                        CommandMethod commandMethod = new CommandMethod(commandBus.getOwner().getId(), object, method);
                         CommandNode commandNode = getParentTree(commandMethod.command());
                         commandNode.addAliases(commandMethod.command().alias());
                         commandNode.addCommandMethod(commandMethod);
                         Permission permission = commandMethod.permission();
-                        Assignment assignment = commandMethod.assignment();
                         if (!permission.value().isEmpty()) {
-                            permissions.put(permission, assignment);
+                            permissions.put(commandMethod.commandString(), permission);
                         }
                         count++;
                     } catch (Exception e) {
@@ -61,20 +60,21 @@ class Registrar {
         commandBus.info("Found {} commands in class {}", count, object.getClass().getSimpleName());
     }
 
-    void submit(Object plugin) {
+    void submit() {
         if (submitted) {
             throw new UnsupportedOperationException("Cannot submit commands more than once");
         }
 
+        final Object instance = commandBus.getInstance();
+
         final CommandManager commandManager = Sponge.getCommandManager();
         roots.values().stream()
                 .map(SpongeCommand::new)
-                .forEach(command -> commandManager.register(plugin, command, command.aliases()));
+                .forEach(command -> commandManager.register(instance, command, command.aliases()));
 
         final PermissionService permissionService = Sponge.getServiceManager().provideUnchecked(PermissionService.class);
-        permissions.entrySet().forEach(entry -> permissionService.newDescriptionBuilder(plugin).ifPresent(builder -> {
-            Permission permission = entry.getKey();
-            Assignment assignment = entry.getValue();
+        permissions.values().forEach(permission -> permissionService.newDescriptionBuilder(instance).ifPresent(builder -> {
+            Assignment assignment = permission.assign();
             builder.id(permission.value());
             builder.description(Text.of(permission.description()));
             if (!assignment.role().isEmpty()) {

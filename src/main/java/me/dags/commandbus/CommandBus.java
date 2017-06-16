@@ -2,8 +2,6 @@ package me.dags.commandbus;
 
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner;
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.plugin.PluginContainer;
 
@@ -17,13 +15,13 @@ import java.util.Optional;
 public final class CommandBus {
 
     private final Registrar registrar;
-    private final boolean logging;
-    private final Logger logger;
+    private final PluginContainer owner;
+    private final Object instance;
 
-    private CommandBus(Builder builder) {
-        this.logger = builder.logger;
-        this.logging = builder.logging;
+    private CommandBus(PluginContainer owner, Object instance) {
+        this.owner = owner;
         this.registrar = new Registrar(this);
+        this.instance = instance;
     }
 
     public CommandBus registerPackageOf(Class<?> child) {
@@ -82,66 +80,51 @@ public final class CommandBus {
         registrar.register(object);
     }
 
-    public void submit(Object plugin) {
-        Optional<PluginContainer> container = Sponge.getPluginManager().fromInstance(plugin);
-        if (!container.isPresent()) {
-            String warn = "Attempted to register commands for %s, but it is not a valid Sponge Plugin!";
-            String message = String.format(warn, plugin.getClass());
-            throw new IllegalArgumentException(message);
-        }
-        info("Registering commands for {}", container.get().getId());
-        registrar.submit(plugin);
+    public void submit() {
+        info("Registering commands for {}", owner.getId());
+        registrar.submit();
+    }
+
+    PluginContainer getOwner() {
+        return owner;
+    }
+
+    Object getInstance() {
+        return instance;
     }
 
     void info(String message, Object... args) {
-        if (logging) {
-            logger.info(message, args);
-        }
+        owner.getLogger().info(message, args);
     }
 
     void warn(String message, Object... args) {
-        if (logging) {
-            logger.warn(message, args);
-        }
+        owner.getLogger().warn(message, args);
     }
 
     void error(String message, Object... args) {
-        if (logging) {
-            logger.error(message, args);
-        }
+        owner.getLogger().error(message, args);
     }
 
-    public static CommandBus create() {
-        return builder().build();
-    }
+    public static CommandBus create(Object plugin) {
+        final PluginContainer container;
+        final Object instance;
 
-    public static CommandBus create(Logger logger) {
-        return builder().logger(logger).build();
-    }
-
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    public static class Builder {
-
-        private Logger logger = LoggerFactory.getLogger(CommandBus.class.getSimpleName());
-        private boolean logging = true;
-
-        public Builder logging(boolean logging) {
-            this.logging = logging;
-            return this;
-        }
-
-        public Builder logger(Logger logger) {
-            if (logger != null) {
-                this.logger = logger;
+        if (plugin instanceof PluginContainer) {
+            container = (PluginContainer) plugin;
+            Optional<?> optional = container.getInstance();
+            if (!optional.isPresent()) {
+                throw new UnsupportedOperationException("Could not get plugin instance from container");
             }
-            return this;
+            instance = optional.get();
+        } else {
+            Optional<PluginContainer> optional = Sponge.getPluginManager().fromInstance(plugin);
+            if (!optional.isPresent()) {
+                throw new UnsupportedOperationException("Provided object is not a plugin");
+            }
+            container = optional.get();
+            instance = plugin;
         }
 
-        public CommandBus build() {
-            return new CommandBus(this);
-        }
+        return new CommandBus(container, instance);
     }
 }
