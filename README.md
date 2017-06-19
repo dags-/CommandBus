@@ -4,7 +4,12 @@ Another command annotation processing thing
 [![Release](https://jitpack.io/v/dags-/CommandBus.svg)](https://jitpack.io/#dags-/CommandBus)
 
 
-#### example:
+### Example Code:
+
+**Note!** - the source of the command can only be inferred if it's type is CommandSource. Otherwise, the parameter
+ must be annotated with the `@Src` annotation (ie: an unannotated Player parameter would be interpreted
+ as an argument rather than the source of the command).
+ 
 ```java
 @Plugin(id = "example", name = "Example", version = "1.0", description = "Example plugin")
 public class ExamplePlugin {
