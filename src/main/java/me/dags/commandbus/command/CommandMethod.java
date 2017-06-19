@@ -1,7 +1,10 @@
 package me.dags.commandbus.command;
 
 import com.google.common.collect.ImmutableList;
-import me.dags.commandbus.annotation.*;
+import me.dags.commandbus.annotation.Command;
+import me.dags.commandbus.annotation.Description;
+import me.dags.commandbus.annotation.Flags;
+import me.dags.commandbus.annotation.Permission;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.ArgumentParseException;
@@ -10,7 +13,6 @@ import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.text.Text;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Collection;
@@ -34,10 +36,6 @@ public class CommandMethod {
 
     public CommandMethod(String pluginId, Object owner, Method target) {
         Flags flags = target.getAnnotation(Flags.class);
-        Command command = target.getAnnotation(Command.class);
-        Permission permission = target.getAnnotation(Permission.class);
-        Assignment assignment = target.getAnnotation(Assignment.class);
-        Description description = target.getAnnotation(Description.class);
 
         TypeIds typeIds = new TypeIds();
         ImmutableList.Builder<CommandParameter> builder = ImmutableList.builder();
@@ -63,13 +61,13 @@ public class CommandMethod {
 
         this.owner = owner;
         this.target = target;
-        this.command = command;
+        this.command = target.getAnnotation(Command.class);
         this.priority = priority;
         this.argCount = argCount;
         this.variable = variable || priority > 1;
         this.parameters = parameters;
-        this.permission = buildPermission(pluginId, command, permission, assignment);
-        this.description = description != null ? description : command.description();
+        this.permission = AnnotationHelper.getPermission(pluginId, target);
+        this.description = AnnotationHelper.getDescription(target);
     }
 
     public Command command() {
@@ -195,47 +193,7 @@ public class CommandMethod {
 
         @Override
         public String toString() {
-            return command.parent() + " " + command.alias()[0] + ":" + target.getName();
+            return commandString() + ":" + target.getName();
         }
-    }
-
-    private Permission buildPermission(String id, Command command, Permission permission, Assignment assignment) {
-        Permission perm = permission != null ? permission : command.permission();
-        Assignment assign = assignment != null ? assignment : permission != null ? permission.assign() : command.assign();
-
-        String node = perm.value();
-        if (node.isEmpty() && permission != null) {
-            if (command.parent().isEmpty()) {
-                node = String.format("%s.command.%s", id, command.alias()[0]).replace(' ', '.');
-            } else {
-                node = String.format("%s.command.%s.%s", id, command.parent(), command.alias()[0]).replace(' ', '.');
-            }
-        }
-
-        final String permNode = node;
-        final String permDesc = perm.description();
-        final Assignment permAssign = assign;
-
-        return new Permission(){
-            @Override
-            public Class<? extends Annotation> annotationType() {
-                return Permission.class;
-            }
-
-            @Override
-            public String value() {
-                return permNode;
-            }
-
-            @Override
-            public String description() {
-                return permDesc;
-            }
-
-            @Override
-            public Assignment assign() {
-                return permAssign;
-            }
-        };
     }
 }

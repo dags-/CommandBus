@@ -295,6 +295,7 @@ class CommandParameter {
                     builder.append(builder.length() > 0 ? " | " : "").append(name).append(" ").append(type);
                 }
             }
+
             return builder.toString();
         }
 
