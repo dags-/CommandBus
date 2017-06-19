@@ -250,7 +250,7 @@ class CommandParameter {
 
             type = String.class;
             this.join = true;
-            name = (!join.value().isEmpty() ? join.value() : type.getSimpleName().toLowerCase()) + " ";
+            name = (!join.value().isEmpty() ? join.value() : type.getSimpleName().toLowerCase()) + "..";
             return this;
         }
 
@@ -267,12 +267,12 @@ class CommandParameter {
             ImmutableMap.Builder<String, CommandElement> builder = ImmutableMap.builder();
             for (Flag flag : flags.value()) {
                 if (flag.type() == boolean.class || flag.type() == Boolean.class) {
-                    String name = "-" + flag.name();
+                    String name = "-" + flag.value();
                     CommandElement element = GenericArguments.none();
                     builder.put(name, element);
                 } else {
-                    String name = "--" + flag.name();
-                    CommandElement element = ParameterTypes.of(flag.type(), flag.name());
+                    String name = "--" + flag.value();
+                    CommandElement element = ParameterTypes.of(flag.type(), flag.value());
                     builder.put(name, element);
                 }
             }
@@ -287,10 +287,10 @@ class CommandParameter {
             StringBuilder builder = new StringBuilder();
             for (Flag flag : flags.value()) {
                 if (flag.type() == boolean.class || flag.type() == Boolean.class) {
-                    String name = "-" + flag.name();
+                    String name = "-" + flag.value();
                     builder.append(builder.length() > 0 ? " | " : "").append(name);
                 } else {
-                    String name = "--" + flag.name();
+                    String name = "--" + flag.value();
                     String type = "<" + flag.type().getSimpleName().toLowerCase() + ">";
                     builder.append(builder.length() > 0 ? " | " : "").append(name).append(" ").append(type);
                 }

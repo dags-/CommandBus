@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Flag {
 
-    String name();
+    String value();
 
     Class<?> type() default boolean.class;
 }

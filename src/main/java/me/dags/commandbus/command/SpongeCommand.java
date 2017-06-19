@@ -102,7 +102,9 @@ public class SpongeCommand implements CommandCallable {
 
     @Override
     public Text getUsage(CommandSource source) {
-        return Text.of("USE", Text.NEW_LINE, "AGAIN");
+        return Text.builder(String.format("<args> - See '/help %s' for more information", root.getAlias()))
+                .onClick(TextActions.runCommand(String.format("/help %s", root.getAlias())))
+                .build();
     }
 
     private Text generateHelp(CommandSource source) {

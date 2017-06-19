@@ -84,6 +84,13 @@ public class CommandMethod {
         return permission;
     }
 
+    public String commandString() {
+        if (command.parent().isEmpty()) {
+            return String.format("/%s %s", command.alias()[0], usage());
+        }
+        return String.format("/%s %s %s", command.parent(), command.alias()[0], usage());
+    }
+
     String usage() {
         StringBuilder builder = new StringBuilder();
         for (CommandParameter parameter : parameters) {
@@ -199,9 +206,9 @@ public class CommandMethod {
         String node = perm.value();
         if (node.isEmpty() && permission != null) {
             if (command.parent().isEmpty()) {
-                node = String.format("%s.%s", id, command.alias()[0]).replace(' ', '.');
+                node = String.format("%s.command.%s", id, command.alias()[0]).replace(' ', '.');
             } else {
-                node = String.format("%s.%s.%s", id, command.parent(), command.alias()[0]).replace(' ', '.');
+                node = String.format("%s.command.%s.%s", id, command.parent(), command.alias()[0]).replace(' ', '.');
             }
         }
 
