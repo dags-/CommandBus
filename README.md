@@ -3,6 +3,12 @@ Another command annotation processing thing
 
 [![Release](https://jitpack.io/v/dags-/CommandBus.svg)](https://jitpack.io/#dags-/CommandBus)
 
+### Features:
+- Simple registration of commands
+- Optional command flags
+- Generates command usage and help texts
+- Automatically generates & registers permissions
+- Generates pre-plugin markdown tables of all commands/permissions/descriptions
 
 ### Example Code:
 
@@ -21,6 +27,18 @@ public class ExamplePlugin {
     }
 
     /**
+     * /hello world
+     * 
+     * @param src The source of the command
+     */
+    @Command(alias = "world", parent = "hello")
+    public void example0(CommandSource src) {
+        Fmt.stress("hellow world!").tell(src);
+    }
+
+    /**
+     * /example pm <player> <message>
+     *     
      * @param src The source of the command (inferred)
      * @param target Accepts an online player's name
      * @param message The remaining arguments joined by space characters
@@ -34,19 +52,23 @@ public class ExamplePlugin {
     }
 
     /**
+     * /example pma <player> <message>
+     * 
      * @param src The source of the command (explicit)
      * @param targets Collects all online players whose name matches the input
      * @param message The remaining arguments joined by space characters
      */
     @Permission
     @Command(alias = "pma", parent = "example")
-    @Description("Send a private message to all matching players")
+    @Description("Send a private message")
     public void example2(@Src Player src, Collection<Player> targets, @Join String message) {
         Fmt.stress("You -> All: ").info(message).tell(src);
         Fmt.stress("%s -> You: ", src.getName()).info(message).tell(targets);
     }
 
     /**
+     * /example flags (-bool | --int <integer> | --user <user>)
+     * 
      * @param src The source of the command (explicit)
      * @param flags A MultiHashMap containing any flags that may have been parsed
      */
@@ -62,6 +84,8 @@ public class ExamplePlugin {
     }
 
     /**
+     * /example varargs <blocktype...>
+     * 
      * @param src The source of the command (inferred)
      * @param blocks A variable length array of BlockTypes parsed from the src's input
      */
