@@ -8,7 +8,7 @@ Another command annotation processing thing
 - Optional command flags
 - Generates command usage and help texts
 - Automatically generates & registers permissions
-- Generates pre-plugin markdown tables of all commands/permissions/descriptions
+- Generates per-plugin markdown tables of all commands/permissions/descriptions
 
 ### Example Code:
 
