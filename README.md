@@ -40,7 +40,7 @@ public class ExamplePlugin {
      */
     @Permission
     @Command(alias = "pma", parent = "example")
-    @Description("Send a private message")
+    @Description("Send a private message to all matching players")
     public void example2(@Src Player src, Collection<Player> targets, @Join String message) {
         Fmt.stress("You -> All: ").info(message).tell(src);
         Fmt.stress("%s -> You: ", src.getName()).info(message).tell(targets);
