@@ -3,45 +3,97 @@ Another command annotation processing thing
 
 [![Release](https://jitpack.io/v/dags-/CommandBus.svg)](https://jitpack.io/#dags-/CommandBus)
 
+### Features:
+- Write commands as Java methods
+- Easy registration - by class, object, or even by package
+- Optional command flags
+- Generates command usage and help texts
+- Automatically generates & registers permissions
+- Generates per-plugin markdown tables of all commands/permissions/descriptions
 
-#### example command code
+### Example Code:
 ```java
-public class ExampleCommands {
-
-    @Command(alias = "pm")
-    public void message(@Caller CommandSource from, @One("to") Player to, @Join("message") String message) {
-        FMT.stress("You => %s: ", to.getName()).info(message).tell(from);
-        FMT.stress("%s => You: ", from.getName()).info(message).tell(to);
-    }
-
-    @Command(alias = "all", parent = "pm")
-    @Assignment(role = "admin", permit = true)
-    @Description("Send a private message to all matching players")
-    @Permission(value = "exampleplugin.pm.all", description = "Allow use of the '/pm all' command")
-    public void messageAll(@Caller CommandSource from, @All("to") Collection<Player> to, @Join("message") String message) {
-        FMT.stress("You => All: ").info(message).tell(from);
-        FMT.stress("%s => You: ", from.getName()).info(message).tell(to);
-    }
-}
-```
-
-#### example registration code
-```java
-@Plugin(..)
+@Plugin(id = "example", name = "Example", version = "1.0", description = "Example plugin")
 public class ExamplePlugin {
 
-    public void ontInit(GameInitializationEvent event) {
-        // Register commands in a specific class
-        CommandBus.create().register(ExampleCommands.class).submit(this);
-        
-        // Register commands in a specific object
-        CommandBus.create().register(new ExampleCommands(..)).submit(this);
-        
-        // Register commands from all classes in the same package as ExampleCommands.class
-        CommandBus.create().registerPackageOf(ExampleCommands.class).submit(this);
-        
-        // Register commands from all classes in the same package as ExampleCommands.class and all it's sub-packages
-        CommandBus.create().registerSubPackagesOf(ExampleCommands.class).submit(this);
+    @Listener
+    public void init(GameInitializationEvent event) {
+        // Can register multiple objects/classes/packages before executing submit()
+        CommandBus.create(this).register(this).submit();
+    }
+
+    /**
+     * /hello world
+     * 
+     * @param src The source of the command - Note! We must explicitly state that the Player is the command source
+     *                                        using @Src as it would otherwise be interpretted as a parameter
+     */
+    @Command(alias = "world", parent = "hello")
+    public void example0(@Src Player src) {
+        Fmt.stress("hellow world!").tell(src);
+    }
+
+    /**
+     * /example pm <player> <message>
+     *     
+     * @param src The source of the command (inferred) - Note! Because src is specified as a CommandSource, the @Src
+     *                                                   annotation is not required
+     * @param target Accepts an online player's name
+     * @param message The remaining arguments joined by space characters
+     */
+    @Permission
+    @Command(alias = "pm", parent = "example")
+    @Description("Send a private message")
+    public void example1(CommandSource src, Player target, @Join String message) {
+        Fmt.stress("You -> %s: ", target.getName()).info(message).tell(src);
+        Fmt.stress("%s -> You: ", src.getName()).info(message).tell(src);
+    }
+
+    /**
+     * /example pma <player> <message>
+     * 
+     * @param src The source of the command (explicit)
+     * @param targets Collects all online players whose name matches the input
+     * @param message The remaining arguments joined by space characters
+     */
+    @Permission
+    @Command(alias = "pma", parent = "example")
+    @Description("Send a private message")
+    public void example2(@Src Player src, Collection<Player> targets, @Join String message) {
+        Fmt.stress("You -> All: ").info(message).tell(src);
+        Fmt.stress("%s -> You: ", src.getName()).info(message).tell(targets);
+    }
+
+    /**
+     * /example flags (-bool | --int <integer> | --user <user>)
+     * 
+     * @param src The source of the command (explicit)
+     * @param flags A MultiHashMap containing any flags that may have been parsed
+     */
+    @Permission
+    @Command(alias = "flags", parent = "example")
+    @Description("An example command that accepts flags")
+    @Flags({@Flag("bool"), @Flag(value = "int", type = int.class), @Flag(value = "user", type = User.class)})
+    public void example3(@Src Player src, CommandFlags flags) {
+        Fmt.info("Bool: ").stress(flags.getOrDefault("bool", false))
+                .line().info("Int: ").stress(flags.getOrDefault("int", 0))
+                .line().info("User: ").stress(flags.getOrDefault("user", src))
+                .tell(src);
+    }
+
+    /**
+     * /example varargs <blocktype...>
+     * 
+     * @param src The source of the command (inferred)
+     * @param blocks A variable length array of BlockTypes parsed from the src's input
+     */
+    @Permission
+    @Command(alias = "varargs", parent = "example")
+    @Description("An example command that accepts varargs")
+    public void example4(CommandSource src, BlockType... blocks) {
+        for (int i = 0; i < blocks.length; i++) {
+            Fmt.info("Block #%s: ", i).stress(blocks[i].getName()).tell(src);
+        }
     }
 }
 ```
