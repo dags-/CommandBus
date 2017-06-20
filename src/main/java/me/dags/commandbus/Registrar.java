@@ -46,7 +46,12 @@ class Registrar {
         do {
             for (Method method : c.getDeclaredMethods()) {
                 if (method.isAnnotationPresent(Command.class)) {
-                    registerMethod(object, method);
+                    method.setAccessible(true);
+                    if (method.isAccessible()) {
+                        registerMethod(object, method);
+                    } else {
+                        commandBus.warn("Method {} in Class {} is not accessible!", method, c);
+                    }
                 }
             }
             c = c.getSuperclass();
