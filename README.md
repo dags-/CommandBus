@@ -4,18 +4,14 @@ Another command annotation processing thing
 [![Release](https://jitpack.io/v/dags-/CommandBus.svg)](https://jitpack.io/#dags-/CommandBus)
 
 ### Features:
-- Simple registration of commands
+- Write commands as Java methods
+- Easy registration - by class, object, or even by package
 - Optional command flags
 - Generates command usage and help texts
 - Automatically generates & registers permissions
 - Generates per-plugin markdown tables of all commands/permissions/descriptions
 
 ### Example Code:
-
-**Note!** - the source of the command can only be inferred if it's type is CommandSource. Otherwise, the parameter
- must be annotated with the `@Src` annotation (ie: an unannotated Player parameter would be interpreted
- as an argument rather than the source of the command).
- 
 ```java
 @Plugin(id = "example", name = "Example", version = "1.0", description = "Example plugin")
 public class ExamplePlugin {
@@ -29,17 +25,19 @@ public class ExamplePlugin {
     /**
      * /hello world
      * 
-     * @param src The source of the command
+     * @param src The source of the command - Note! We must explicitly state that the Player is the command source
+     *                                        using @Src as it would otherwise be interpretted as a parameter
      */
     @Command(alias = "world", parent = "hello")
-    public void example0(CommandSource src) {
+    public void example0(@Src Player src) {
         Fmt.stress("hellow world!").tell(src);
     }
 
     /**
      * /example pm <player> <message>
      *     
-     * @param src The source of the command (inferred)
+     * @param src The source of the command (inferred) - Note! Because src is specified as a CommandSource, the @Src
+     *                                                   annotation is not required
      * @param target Accepts an online player's name
      * @param message The remaining arguments joined by space characters
      */
