@@ -30,7 +30,7 @@ public class ExamplePlugin {
      */
     @Command(alias = "world", parent = "hello")
     public void example0(@Src Player src) {
-        Fmt.stress("hellow world!").tell(src);
+        Fmt.stress("hello world!").tell(src);
     }
 
     /**

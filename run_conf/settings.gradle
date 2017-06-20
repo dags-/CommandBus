@@ -1,2 +1,0 @@
-include ':CommandBus'
-project(':CommandBus').projectDir = new File(settingsDir, '../')
