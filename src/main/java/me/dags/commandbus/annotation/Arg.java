@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  */
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface All {
+public @interface Arg {
 
-    String value() default "";
+    String value();
 }

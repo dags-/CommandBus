@@ -1,17 +1,37 @@
 package me.dags.commandbus.command;
 
-import me.dags.commandbus.annotation.Assignment;
-import me.dags.commandbus.annotation.Command;
-import me.dags.commandbus.annotation.Description;
-import me.dags.commandbus.annotation.Permission;
+import com.google.common.collect.ImmutableSet;
+import me.dags.commandbus.annotation.*;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.Set;
 
 /**
  * @author dags <dags@dags.me>
  */
 class AnnotationHelper {
+
+    static String getArgName(Arg arg, String defVal) {
+        return arg != null && !arg.value().isEmpty() ? arg.value() : defVal;
+    }
+
+    static Set<String> getFlags(Flags flags) {
+        if (flags == null) {
+            return Collections.emptySet();
+        }
+
+        ImmutableSet.Builder<String> builder = ImmutableSet.builder();
+        for (Flag flag : flags.value()) {
+            if (flag.type() == boolean.class) {
+                builder.add("-" + flag.value());
+            } else {
+                builder.add("--" + flag.value());
+            }
+        }
+        return builder.build();
+    }
 
     static Description getDescription(Method method) {
         Description description = method.getAnnotation(Description.class);

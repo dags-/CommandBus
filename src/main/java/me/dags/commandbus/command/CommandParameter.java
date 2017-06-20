@@ -4,6 +4,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import me.dags.commandbus.annotation.*;
 import me.dags.commandbus.utils.FlagElement;
+import me.dags.commandbus.utils.JoinedStringElement;
+import me.dags.commandbus.utils.VarargElement;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandArgs;
@@ -56,13 +58,6 @@ class CommandParameter {
                 String error = String.format("You must be a %s to use this command", type.getSimpleName());
                 throw new CommandException(Text.of(error));
             }
-        }
-
-        if (varargs) {
-            while (args.hasNext()) {
-                element.parse(source, args, context);
-            }
-            return;
         }
 
         element.parse(source, args, context);
@@ -168,14 +163,14 @@ class CommandParameter {
             return builder.caller().build();
         }
 
-        All all = parameter.getAnnotation(All.class);
-        if (all != null || parameter.getType() == Collection.class) {
-            return builder.all(all).build();
+        Arg arg = parameter.getAnnotation(Arg.class);
+
+        if (parameter.getType() == Collection.class) {
+            return builder.all(arg).build();
         }
 
-        Var var = parameter.getAnnotation(Var.class);
-        if (var != null || parameter.getType().isArray() || parameter.isVarArgs()) {
-            return builder.var(var).build();
+        if (parameter.getType().isArray() || parameter.isVarArgs()) {
+            return builder.var(arg).build();
         }
 
         Join join = parameter.getAnnotation(Join.class);
@@ -183,7 +178,7 @@ class CommandParameter {
             return builder.join(join).build();
         }
 
-        return builder.one(parameter.getAnnotation(One.class)).build();
+        return builder.one(arg).build();
     }
 
     private static class Builder {
@@ -194,6 +189,7 @@ class CommandParameter {
 
         private String name = "";
         private String usage = "";
+        private String separator = "";
         private Text id = Text.EMPTY;
         private Class<?> type = null;
         private CommandElement element = GenericArguments.none();
@@ -220,29 +216,6 @@ class CommandParameter {
             return this;
         }
 
-        private Builder all(All all) {
-            if (Collection.class != type) {
-                throw new IllegalStateException("@All must decorate a Collection parameter");
-            }
-
-            ParameterizedType paramT = (ParameterizedType) parameter.getParameterizedType();
-            type = (Class<?>) paramT.getActualTypeArguments()[0];
-            collect = true;
-            name = all != null && !all.value().isEmpty() ? all.value() : type.getSimpleName().toLowerCase();
-            return this;
-        }
-
-        private Builder var(Var var) {
-            if (!type.isArray()) {
-                throw new IllegalStateException("@Var must decorate an Array or Varargs parameter");
-            }
-
-            varargs = true;
-            type = type.getComponentType();
-            name = var != null && !var.value().isEmpty() ? var.value() : type.getSimpleName().toLowerCase() + "...";
-            return this;
-        }
-
         private Builder join(Join join) {
             if (type != String.class) {
                 throw new IllegalStateException("@Join must decorate a String parameter");
@@ -250,12 +223,36 @@ class CommandParameter {
 
             type = String.class;
             this.join = true;
+            this.separator = join.separator();
             name = (!join.value().isEmpty() ? join.value() : type.getSimpleName().toLowerCase()) + "..";
             return this;
         }
 
-        private Builder one(One one) {
-            name = one != null && !one.value().isEmpty() ? one.value() : type.getSimpleName().toLowerCase();
+        private Builder all(Arg arg) {
+            if (Collection.class != type) {
+                throw new IllegalStateException("@All must decorate a Collection parameter");
+            }
+
+            ParameterizedType paramT = (ParameterizedType) parameter.getParameterizedType();
+            type = (Class<?>) paramT.getActualTypeArguments()[0];
+            collect = true;
+            name = AnnotationHelper.getArgName(arg, type.getSimpleName().toLowerCase());
+            return this;
+        }
+
+        private Builder var(Arg arg) {
+            if (!type.isArray()) {
+                throw new IllegalStateException("@Var must decorate an Array or Varargs parameter");
+            }
+
+            varargs = true;
+            type = type.getComponentType();
+            name = AnnotationHelper.getArgName(arg, type.getSimpleName().toLowerCase() + "...");
+            return this;
+        }
+
+        private Builder one(Arg arg) {
+            name = AnnotationHelper.getArgName(arg, type.getSimpleName().toLowerCase());
             return this;
         }
 
@@ -308,7 +305,9 @@ class CommandParameter {
                 usage = "<" + name + ">";
 
                 if (join) {
-                    element = GenericArguments.remainingJoinedStrings(Text.of(id));
+                    element = new JoinedStringElement(Text.of(id), separator, AnnotationHelper.getFlags(flags));
+                } else if (varargs) {
+                    element = new VarargElement(Text.of(id), ParameterTypes.of(type, id), AnnotationHelper.getFlags(flags));
                 } else if (type == CommandFlags.class){
                     flag = true;
                     usage = flagUsage();

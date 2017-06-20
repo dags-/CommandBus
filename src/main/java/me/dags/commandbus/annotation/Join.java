@@ -13,4 +13,6 @@ import java.lang.annotation.Target;
 public @interface Join {
 
     String value() default "";
+
+    String separator() default " ";
 }
