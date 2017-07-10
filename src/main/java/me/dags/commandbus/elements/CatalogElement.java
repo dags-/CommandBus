@@ -1,4 +1,4 @@
-package me.dags.commandbus.utils;
+package me.dags.commandbus.elements;
 
 import org.spongepowered.api.CatalogType;
 import org.spongepowered.api.Sponge;
@@ -26,8 +26,8 @@ public class CatalogElement<T extends CatalogType> extends CommandElement {
 
     private final Class<T> type;
 
-    public CatalogElement(Class<T> type, Text key) {
-        super(key);
+    public CatalogElement(String key, Class<T> type) {
+        super(Text.of(key));
         this.type = type;
     }
 

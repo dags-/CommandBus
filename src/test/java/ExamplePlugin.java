@@ -26,6 +26,21 @@ public class ExamplePlugin {
         CommandBus.create(this).register(this).submit();
     }
 
+    @Command(alias = "sub2", parent = "par sub1")
+    public void other(@Src CommandSource src) {
+        Fmt.info("sub2").tell(src);
+    }
+
+    @Command(alias = "sub1", parent = "par")
+    public void other2(@Src CommandSource src) {
+        Fmt.info("sub1").tell(src);
+    }
+
+    @Command(alias = "sub3", parent = "par sub1")
+    public void othe3r(@Src CommandSource src) {
+        Fmt.info("sub3").tell(src);
+    }
+
     @Permission
     @Command(alias = "pm")
     @Description("Send a private message")

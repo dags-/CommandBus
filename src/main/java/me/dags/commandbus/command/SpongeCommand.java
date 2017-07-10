@@ -69,10 +69,15 @@ public class SpongeCommand implements CommandCallable {
 
     @Override
     public List<String> getSuggestions(CommandSource source, String arguments, @Nullable Location<World> location) throws CommandException {
+        if (arguments.isEmpty()) {
+            arguments = " ";
+        }
+
         Set<String> suggestions = new LinkedHashSet<>();
         List<SingleArg> singleArgs = TOKENIZER.tokenize(arguments, true);
         CommandArgs args = new CommandArgs(arguments, singleArgs);
         root.suggest(source, args, singleArgs.size(), suggestions);
+
         return new ArrayList<>(suggestions);
     }
 

@@ -1,4 +1,4 @@
-package me.dags.commandbus.utils;
+package me.dags.commandbus.elements;
 
 import me.dags.commandbus.command.CommandFlags;
 import org.spongepowered.api.command.CommandSource;
@@ -22,8 +22,8 @@ public class FlagElement extends CommandElement {
 
     private final Map<String, CommandElement> flagElements;
 
-    public FlagElement(Text key, Map<String, CommandElement> flags) {
-        super(key);
+    public FlagElement(String key, Map<String, CommandElement> flags) {
+        super(Text.of(key));
         this.flagElements = flags;
     }
 

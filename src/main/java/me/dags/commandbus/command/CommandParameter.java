@@ -3,9 +3,9 @@ package me.dags.commandbus.command;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import me.dags.commandbus.annotation.*;
-import me.dags.commandbus.utils.FlagElement;
-import me.dags.commandbus.utils.JoinedStringElement;
-import me.dags.commandbus.utils.VarargElement;
+import me.dags.commandbus.elements.FlagElement;
+import me.dags.commandbus.elements.JoinedStringElement;
+import me.dags.commandbus.elements.VarargElement;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandArgs;
@@ -305,13 +305,13 @@ class CommandParameter {
                 usage = "<" + name + ">";
 
                 if (join) {
-                    element = new JoinedStringElement(Text.of(id), separator, AnnotationHelper.getFlags(flags));
+                    element = new JoinedStringElement(id, separator, AnnotationHelper.getFlags(flags));
                 } else if (varargs) {
-                    element = new VarargElement(Text.of(id), ParameterTypes.of(type, id), AnnotationHelper.getFlags(flags));
+                    element = new VarargElement(id, ParameterTypes.of(type, id), AnnotationHelper.getFlags(flags));
                 } else if (type == CommandFlags.class){
                     flag = true;
                     usage = flagUsage();
-                    element = new FlagElement(Text.of(id), flags());
+                    element = new FlagElement(id, flags());
                 } else {
                     element = ParameterTypes.of(type, id);
                 }

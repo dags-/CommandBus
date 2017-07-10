@@ -2,7 +2,8 @@ package me.dags.commandbus.command;
 
 import com.flowpowered.math.vector.Vector3d;
 import com.google.common.collect.ImmutableMap;
-import me.dags.commandbus.utils.CatalogElement;
+import me.dags.commandbus.elements.CatalogElement;
+import me.dags.commandbus.elements.UserElement;
 import org.spongepowered.api.CatalogType;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.GenericArguments;
@@ -43,7 +44,7 @@ class ParameterTypes {
         map.put(Location.class, s -> GenericArguments.location(Text.of(s)));
         map.put(Player.class, s -> GenericArguments.player(Text.of(s)));
         map.put(String.class, s -> GenericArguments.string(Text.of(s)));
-        map.put(User.class, s -> GenericArguments.user(Text.of(s)));
+        map.put(User.class, UserElement::new);
         map.put(Vector3d.class, s -> GenericArguments.vector3d(Text.of(s)));
         map.put(World.class, s -> GenericArguments.world(Text.of(s)));
         types = ImmutableMap.copyOf(map);
@@ -71,7 +72,7 @@ class ParameterTypes {
             return f1.apply(key);
         }
         if (CatalogType.class.isAssignableFrom(type)) {
-            return new CatalogElement<>((Class<? extends CatalogType>) type, Text.of(key));
+            return new CatalogElement<>(key, (Class<? extends CatalogType>) type);
         }
         if (Enum.class.isAssignableFrom(type)) {
             return GenericArguments.enumValue(Text.of(key), (Class<? extends Enum>) type);

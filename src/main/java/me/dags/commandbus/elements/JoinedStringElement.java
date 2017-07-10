@@ -1,4 +1,4 @@
-package me.dags.commandbus.utils;
+package me.dags.commandbus.elements;
 
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.ArgumentParseException;
@@ -8,41 +8,41 @@ import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.text.Text;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 /**
  * @author dags <dags@dags.me>
  */
-public class VarargElement extends CommandElement {
+public class JoinedStringElement extends CommandElement {
 
-    private final CommandElement element;
     private final Set<String> flags;
+    private final String separator;
 
-    public VarargElement(Text key, CommandElement element, Set<String> flags) {
-        super(key);
-        this.element = element;
+    public JoinedStringElement(String key, String separator, Set<String> flags) {
+        super(Text.of(key));
+        this.separator = separator;
         this.flags = flags;
-    }
-
-    @Override
-    public void parse(CommandSource source, CommandArgs args, CommandContext context) throws ArgumentParseException {
-        while (args.hasNext()) {
-            if (flags.contains(args.peek())) {
-                break;
-            }
-            element.parse(source, args, context);
-        }
     }
 
     @Nullable
     @Override
     protected Object parseValue(CommandSource source, CommandArgs args) throws ArgumentParseException {
-        return null;
+        StringBuilder sb = new StringBuilder();
+
+        while (args.hasNext()) {
+            if (flags.contains(args.peek())) {
+                break;
+            }
+            sb.append(sb.length() > 0 ? separator : "").append(args.next());
+        }
+
+        return sb.toString();
     }
 
     @Override
     public List<String> complete(CommandSource src, CommandArgs args, CommandContext context) {
-        return element.complete(src, args, context);
+        return Collections.emptyList();
     }
 }
