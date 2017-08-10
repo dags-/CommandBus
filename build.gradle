@@ -5,7 +5,7 @@ plugins {
 }
 
 group 'me.dags'
-version '1.8.1-SNAPSHOT'
+version '2.0.0-SNAPSHOT'
 def spongeAPI = '5.2.0'
 def spongeChannel = 'SNAPSHOT'
 
@@ -20,18 +20,16 @@ repositories {
 }
 
 dependencies {
-    compile "org.spongepowered:spongeapi:${spongeAPI}-$spongeChannel"
-    compile 'io.github.lukehutch:fast-classpath-scanner:2.0.16'
+    compileOnly "org.spongepowered:spongeapi:${spongeAPI}-$spongeChannel"
+    testCompileOnly "org.spongepowered:spongeapi:${spongeAPI}-$spongeChannel"
+    compile 'com.github.dags-:Command:0.1-BETA-5'
     compile 'com.github.dags-:Fmt:0.1.1'
 }
 
 shadowJar {
-    dependencies {
-        include dependency('io.github.lukehutch:fast-classpath-scanner')
-        include dependency('com.github.dags-:Fmt')
-    }
     relocate 'io.github.lukehutch.fastclasspathscanner', 'me.dags.commandbus.fcps'
-    relocate 'me.dags.fmt', 'me.dags.commandbus.fmt'
+    relocate 'me.dags.command.', 'me.dags.commandbus.'
+    relocate 'me.dags.fmt.', 'me.dags.commandbus.fmt.'
     classifier = null
 }
 
