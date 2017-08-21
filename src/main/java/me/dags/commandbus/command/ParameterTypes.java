@@ -20,7 +20,7 @@ import java.util.function.Function;
 /**
  * @author dags <dags@dags.me>
  */
-class ParameterTypes {
+public class ParameterTypes {
 
     private static final Map<Class<?>, Function<String, CommandElement>> types;
 
