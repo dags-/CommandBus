@@ -43,4 +43,12 @@ class SpongeOptions {
                 .map(CatalogType::getId)
                 .sorted(Comparator.comparingInt(String::length));
     }
+
+    @SuppressWarnings("unchecked")
+    static Options aliasType(Class<?> type) {
+        return () -> Sponge.getRegistry().getAllOf((Class<? extends AliasCatalogType>) type)
+                .stream()
+                .flatMap(t -> t.getAliases().stream())
+                .sorted(Comparator.comparingInt(String::length));
+    }
 }

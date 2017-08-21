@@ -22,6 +22,9 @@ class SpongeElementFactory extends ElementFactory {
 
     @Override
     public ValueParser<?> getParser(Class<?> type) {
+        if (AliasCatalogType.class.isAssignableFrom(type)) {
+            return SpongeParsers.catalogType(type);
+        }
         if (CatalogType.class.isAssignableFrom(type)) {
             return SpongeParsers.catalogType(type);
         }
@@ -30,6 +33,9 @@ class SpongeElementFactory extends ElementFactory {
 
     @Override
     public Options getOptions(Class<?> type) {
+        if (AliasCatalogType.class.isAssignableFrom(type)) {
+            return SpongeOptions.aliasType(type);
+        }
         if (CatalogType.class.isAssignableFrom(type)) {
             return SpongeOptions.catalogType(type);
         }

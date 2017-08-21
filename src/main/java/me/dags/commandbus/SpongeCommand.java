@@ -96,7 +96,7 @@ class SpongeCommand extends Command<CommandSource> implements CommandCallable {
         getExecutors().stream()
                 .filter(e -> testPermission(source, e.getPermission().value()))
                 .sorted(Comparator.comparing(e -> e.getUsage().value()))
-                .map(e -> Text.builder(e.getUsage().value())
+                .map(e -> Text.builder("/" + e.getUsage().value())
                         .onHover(TextActions.showText(Text.of(e.getDescription().value())))
                         .build()
                 ).forEach(t -> {
