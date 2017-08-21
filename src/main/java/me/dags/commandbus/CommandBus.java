@@ -3,6 +3,8 @@ package me.dags.commandbus;
 import me.dags.command.CommandManager;
 import me.dags.command.annotation.Permission;
 import me.dags.command.command.CommandExecutor;
+import me.dags.command.command.CommandFactory;
+import me.dags.command.element.ElementFactory;
 import me.dags.command.utils.MarkdownWriter;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.plugin.PluginContainer;
@@ -23,14 +25,9 @@ public class CommandBus extends CommandManager<SpongeCommand> {
 
     private final PluginContainer plugin;
 
-    private CommandBus(Builder<SpongeCommand> builder) {
+    private CommandBus(CommandManager.Builder<SpongeCommand> builder) {
         super(builder);
-        plugin = Sponge.getPluginManager().fromInstance(getOwner())
-                .orElse(null);
-
-        if (plugin == null) {
-            throw new IllegalArgumentException("Provided object is not a plugin instance");
-        }
+        plugin = Sponge.getPluginManager().fromInstance(getOwner()).orElseThrow(() -> new IllegalArgumentException("Provided object is not a plugin instance"));
     }
 
     @Override
@@ -94,11 +91,40 @@ public class CommandBus extends CommandManager<SpongeCommand> {
         }
     }
 
+    public static ElementFactory.Builder elements() {
+        return SpongeElementFactory.builder();
+    }
+
+    public static CommandBus.Builder builder() {
+        return new Builder();
+    }
+
     public static CommandBus create(Object plugin) {
-        return CommandBus.<SpongeCommand>builder()
-                .elements(SpongeElementFactory.create())
-                .commands(SpongeCommand::new)
-                .owner(plugin)
-                .build(CommandBus::new);
+        return builder().owner(plugin).build();
+    }
+
+    public static class Builder extends CommandManager.Builder<SpongeCommand> {
+
+        @Override
+        public Builder commands(CommandFactory<SpongeCommand> command) {
+            super.commands(command);
+            return this;
+        }
+
+        @Override
+        public Builder elements(ElementFactory factory) {
+            super.elements(factory);
+            return this;
+        }
+
+        @Override
+        public Builder owner(Object plugin) {
+            super.owner(plugin);
+            return this;
+        }
+
+        public CommandBus build() {
+            return super.build(CommandBus::new);
+        }
     }
 }

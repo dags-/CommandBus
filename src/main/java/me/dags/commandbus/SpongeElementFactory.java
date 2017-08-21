@@ -50,16 +50,30 @@ class SpongeElementFactory extends ElementFactory {
         return super.getFilter(type);
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
     public static ElementFactory create() {
-        return ElementFactory.builder()
-                .parser(Player.class, SpongeParsers.PLAYER)
-                .parser(User.class, SpongeParsers.USER)
-                .parser(World.class, SpongeParsers.WORLD)
-                .parser(Vector3i.class, SpongeParsers.VEC3I)
-                .parser(Vector3d.class, SpongeParsers.VEC3D)
-                .options(Player.class, SpongeOptions.PLAYERS)
-                .options(User.class, SpongeOptions.USERS)
-                .options(World.class, SpongeOptions.WORLDS)
-                .build(SpongeElementFactory::new);
+        return builder().build();
+    }
+
+    public static class Builder extends ElementFactory.Builder {
+
+        private Builder() {
+                this.parser(Player.class, SpongeParsers.PLAYER)
+                    .parser(User.class, SpongeParsers.USER)
+                    .parser(World.class, SpongeParsers.WORLD)
+                    .parser(Vector3i.class, SpongeParsers.VEC3I)
+                    .parser(Vector3d.class, SpongeParsers.VEC3D)
+                    .options(Player.class, SpongeOptions.PLAYERS)
+                    .options(User.class, SpongeOptions.USERS)
+                    .options(World.class, SpongeOptions.WORLDS);
+        }
+
+        @Override
+        public SpongeElementFactory build() {
+            return new SpongeElementFactory(this);
+        }
     }
 }

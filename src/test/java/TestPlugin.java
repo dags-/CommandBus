@@ -1,6 +1,7 @@
 import me.dags.command.annotation.Command;
 import me.dags.command.annotation.Join;
 import me.dags.command.annotation.Src;
+import me.dags.command.element.ElementFactory;
 import me.dags.commandbus.CommandBus;
 import me.dags.fmt.Fmt;
 import org.spongepowered.api.block.BlockState;
@@ -22,6 +23,8 @@ public class TestPlugin {
 
     @Listener
     public void init(GameInitializationEvent e) {
+        ElementFactory factory = CommandBus.elements().provider(String.class, (s, i, options, filter, valueParser) -> null).build();
+        CommandBus.builder().elements(factory).build();
         CommandBus.create(this).register(this).submit();
     }
 
