@@ -99,6 +99,8 @@ public class CatalogElement<T extends CatalogType> extends CommandElement {
     private static int compare(String s1, String s2, String match) {
         int i1 = s1.indexOf(match);
         int i2 = s2.indexOf(match);
-        return i1 != i2 ? i1 - i2 : s1.length() - s2.length();
+        int c1 = i1 != i2 ? i1 : s1.length();
+        int c2 = i1 != i2 ? i2 : s2.length();
+        return Integer.compare(c1, c2);
     }
 }

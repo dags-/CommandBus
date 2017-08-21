@@ -1,7 +1,6 @@
 package me.dags.commandbus.command;
 
 import com.flowpowered.math.vector.Vector3d;
-import com.google.common.collect.ImmutableMap;
 import me.dags.commandbus.elements.CatalogElement;
 import me.dags.commandbus.elements.UserElement;
 import org.spongepowered.api.CatalogType;
@@ -47,7 +46,11 @@ class ParameterTypes {
         map.put(User.class, UserElement::new);
         map.put(Vector3d.class, s -> GenericArguments.vector3d(Text.of(s)));
         map.put(World.class, s -> GenericArguments.world(Text.of(s)));
-        types = ImmutableMap.copyOf(map);
+        types = map;
+    }
+
+    public static void register(Class<?> type, Function<String, CommandElement> func) {
+        types.put(type, func);
     }
 
     static void typeCheck(Class<?> type, Parameter source) {
