@@ -96,7 +96,9 @@ public class CommandBus extends CommandManager<SpongeCommand> {
     }
 
     public static CommandBus.Builder builder() {
-        return new Builder();
+        return new Builder()
+                .elements(elements().build())
+                .commands(SpongeCommand::new);
     }
 
     public static CommandBus create(Object plugin) {
