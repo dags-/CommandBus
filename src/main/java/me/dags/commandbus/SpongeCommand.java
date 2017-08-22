@@ -38,6 +38,7 @@ class SpongeCommand extends Command<CommandSource> implements CommandCallable {
     public CommandResult process(CommandSource source, String arguments) throws CommandException {
         try {
             super.processCommand(source, arguments);
+            
             return CommandResult.success();
         } catch (me.dags.command.command.CommandException e) {
             throw new CommandException(Text.of(e.getMessage()), e);
