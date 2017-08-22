@@ -1,130 +1,132 @@
 package me.dags.commandbus;
 
-import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner;
-import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult;
+import me.dags.command.CommandManager;
+import me.dags.command.annotation.Permission;
+import me.dags.command.command.CommandExecutor;
+import me.dags.command.command.CommandFactory;
+import me.dags.command.element.ElementFactory;
+import me.dags.command.utils.MarkdownWriter;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.plugin.PluginContainer;
+import org.spongepowered.api.service.permission.PermissionDescription;
+import org.spongepowered.api.service.permission.PermissionService;
+import org.spongepowered.api.text.Text;
 
-import java.util.Arrays;
-import java.util.List;
+import java.io.IOException;
+import java.io.Writer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Optional;
 
 /**
  * @author dags <dags@dags.me>
  */
-public final class CommandBus {
+public class CommandBus extends CommandManager<SpongeCommand> {
 
-    private final Registrar registrar;
-    private final PluginContainer owner;
-    private final Object instance;
+    private final PluginContainer plugin;
 
-    private CommandBus(PluginContainer owner, Object instance) {
-        this.owner = owner;
-        this.registrar = new Registrar(this);
-        this.instance = instance;
+    private CommandBus(CommandManager.Builder<SpongeCommand> builder) {
+        super(builder);
+        plugin = Sponge.getPluginManager().fromInstance(getOwner()).orElseThrow(() -> new IllegalArgumentException("Provided object is not a plugin instance"));
     }
 
-    public CommandBus registerPackageOf(Class<?> child) {
-        return registerPackage(false, child.getPackage().getName());
+    @Override
+    public void info(String message, Object... args) {
+        plugin.getLogger().info(String.format(message, args));
     }
 
-    public CommandBus registerSubPackagesOf(Class<?> child) {
-        return registerPackage(true, child.getPackage().getName());
+    @Override
+    public void warn(String message, Object... args) {
+        plugin.getLogger().warn(String.format(message, args));
     }
 
-    public CommandBus registerPackage(String... path) {
-        return registerPackage(false, path);
+    @Override
+    protected void submit(Object owner, SpongeCommand command) {
+        Sponge.getCommandManager().register(owner, command, command.getAliases());
+        registerPermissions(command);
+        generateDocs(command);
     }
 
-    public CommandBus registerPackage(boolean recurse, String... path) {
-        info("Scanning package {} for commands...", Arrays.toString(path));
-        ScanResult result = new FastClasspathScanner(path).disableRecursiveScanning(!recurse).scan();
-        List<String> matches = result.getNamesOfAllClasses();
-        info("Discovered {} Command classes in package {}", matches.size(), path);
-        for (String name : matches) {
-            try {
-                Class<?> clazz = Class.forName(name);
-                register(clazz);
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
+    private void registerPermissions(SpongeCommand command) {
+        PermissionService service = Sponge.getServiceManager().provideUnchecked(PermissionService.class);
+
+        for (CommandExecutor e : command.getExecutors()) {
+            Permission permission = e.getPermission();
+            if (permission.value().isEmpty()) {
+                continue;
             }
+
+            Optional<PermissionDescription.Builder> op = service.newDescriptionBuilder(getOwner());
+            if (!op.isPresent()) {
+                return;
+            }
+
+            PermissionDescription.Builder builder = op.get();
+            builder.description(Text.of("Allows use of /", e.getUsage().value()));
+            builder.id(permission.value());
+            if (!permission.role().value().isEmpty()) {
+                builder.assign(permission.role().value(), permission.role().permit());
+            }
+
+            builder.register();
         }
-        return this;
     }
 
-    public CommandBus register(Class<?>... classes) {
-        for (Class<?> c : classes) {
-            register(c);
-        }
-        return this;
-    }
+    private void generateDocs(SpongeCommand command) {
+        Path commandBus = Sponge.getGame().getGameDirectory().resolve("config").resolve("commandbus");
+        Path file = commandBus.resolve(String.format("%s-%s.md", plugin.getId(), command.getAlias()));
 
-    private void register(Class<?> clazz) {
         try {
-            Object object = clazz.newInstance();
-            register(object);
-        } catch (InstantiationException | IllegalAccessException e) {
-            error("Failed to instantiate class {}, make sure there is an accessible default constructor", clazz);
+            Files.createDirectories(commandBus);
+            try (Writer writer = Files.newBufferedWriter(file)) {
+                try (MarkdownWriter mdwriter = new MarkdownWriter(writer)) {
+                    mdwriter.writeHeaders();
+                    for (CommandExecutor e : command.getExecutors()) {
+                        mdwriter.writeCommand(e);
+                    }
+                }
+            }
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public CommandBus register(Object... objects) {
-        for (Object o : objects) {
-            register(o);
-        }
-        return this;
+    public static ElementFactory.Builder elements() {
+        return SpongeElementFactory.builder();
     }
 
-    private void register(Object object) {
-        registrar.register(object);
-    }
-
-    public void submit() {
-        info("Registering commands for {}", owner.getId());
-        registrar.submit();
-    }
-
-    PluginContainer getOwner() {
-        return owner;
-    }
-
-    Object getInstance() {
-        return instance;
-    }
-
-    void info(String message, Object... args) {
-        owner.getLogger().info(message, args);
-    }
-
-    void warn(String message, Object... args) {
-        owner.getLogger().warn(message, args);
-    }
-
-    void error(String message, Object... args) {
-        owner.getLogger().error(message, args);
+    public static CommandBus.Builder builder() {
+        return new Builder()
+                .elements(elements().build())
+                .commands(SpongeCommand::new);
     }
 
     public static CommandBus create(Object plugin) {
-        final PluginContainer container;
-        final Object instance;
+        return builder().owner(plugin).build();
+    }
 
-        if (plugin instanceof PluginContainer) {
-            container = (PluginContainer) plugin;
-            Optional<?> optional = container.getInstance();
-            if (!optional.isPresent()) {
-                throw new UnsupportedOperationException("Could not get plugin instance from container");
-            }
-            instance = optional.get();
-        } else {
-            Optional<PluginContainer> optional = Sponge.getPluginManager().fromInstance(plugin);
-            if (!optional.isPresent()) {
-                throw new UnsupportedOperationException("Provided object is not a plugin");
-            }
-            container = optional.get();
-            instance = plugin;
+    public static class Builder extends CommandManager.Builder<SpongeCommand> {
+
+        @Override
+        public Builder commands(CommandFactory<SpongeCommand> command) {
+            super.commands(command);
+            return this;
         }
 
-        return new CommandBus(container, instance);
+        @Override
+        public Builder elements(ElementFactory factory) {
+            super.elements(factory);
+            return this;
+        }
+
+        @Override
+        public Builder owner(Object plugin) {
+            super.owner(plugin);
+            return this;
+        }
+
+        public CommandBus build() {
+            return super.build(CommandBus::new);
+        }
     }
 }
