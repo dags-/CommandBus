@@ -22,30 +22,30 @@ class SpongeElementFactory extends ElementFactory {
 
     @Override
     public ValueParser<?> getParser(Class<?> type) {
-        if (AliasCatalogType.class.isAssignableFrom(type)) {
-            return SpongeParsers.catalogType(type);
-        }
-        if (CatalogType.class.isAssignableFrom(type)) {
-            return SpongeParsers.catalogType(type);
+        if (!hasParser(type)) {
+            if (CatalogType.class.isAssignableFrom(type)) {
+                return SpongeParsers.catalogType(type);
+            }
         }
         return super.getParser(type);
     }
 
     @Override
     public Options getOptions(Class<?> type) {
-        if (AliasCatalogType.class.isAssignableFrom(type)) {
-            return SpongeOptions.aliasType(type);
-        }
-        if (CatalogType.class.isAssignableFrom(type)) {
-            return SpongeOptions.catalogType(type);
+        if (!hasOptions(type)) {
+            if (CatalogType.class.isAssignableFrom(type)) {
+                return SpongeOptions.catalogType(type);
+            }
         }
         return super.getOptions(type);
     }
 
     @Override
     public Filter getFilter(Class<?> type) {
-        if (CatalogType.class.isAssignableFrom(type)) {
-            return Filter.CONTAINS;
+        if (!hasFilter(type)) {
+            if (CatalogType.class.isAssignableFrom(type)) {
+                return Filter.CONTAINS;
+            }
         }
         return super.getFilter(type);
     }
