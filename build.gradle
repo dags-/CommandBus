@@ -15,12 +15,8 @@ configurations.all {
 
 repositories {
     mavenCentral()
-    maven {
-        url 'http://repo.spongepowered.org/maven'
-    }
-    maven {
-        url 'https://jitpack.io'
-    }
+    maven { url 'http://repo.spongepowered.org/maven' }
+    maven { url 'https://jitpack.io' }
 }
 
 dependencies {
