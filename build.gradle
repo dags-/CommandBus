@@ -9,10 +9,6 @@ version '2.0.0-SNAPSHOT'
 def spongeAPI = '5.2.0'
 def spongeChannel = 'SNAPSHOT'
 
-configurations.all {
-    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
-}
-
 repositories {
     mavenCentral()
     maven {
@@ -26,7 +22,7 @@ repositories {
 dependencies {
     compileOnly "org.spongepowered:spongeapi:${spongeAPI}-$spongeChannel"
     testCompileOnly "org.spongepowered:spongeapi:${spongeAPI}-$spongeChannel"
-    compile 'com.github.dags-:Command:master-SNAPSHOT'
+    compile 'com.github.dags-:Command:0.1-BETA-11'
     compile 'com.github.dags-:Fmt:0.1.1'
 }
 
