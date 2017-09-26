@@ -31,6 +31,11 @@ public class CommandBus extends CommandManager<SpongeCommand> {
     }
 
     @Override
+    public String getOwnerId() {
+        return plugin.getId();
+    }
+
+    @Override
     public void info(String message, Object... args) {
         plugin.getLogger().info(String.format(message, args));
     }
