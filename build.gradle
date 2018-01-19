@@ -18,7 +18,7 @@ repositories {
 dependencies {
     compileOnly "org.spongepowered:spongeapi:${spongeAPI}-$spongeChannel"
     testCompileOnly "org.spongepowered:spongeapi:${spongeAPI}-$spongeChannel"
-    compile 'com.github.dags-:Command:0.1-BETA-13'
+    compile 'com.github.dags-:Command:0.1-BETA-14'
     compile 'com.github.dags-:Fmt:0.1.1'
 }
 
