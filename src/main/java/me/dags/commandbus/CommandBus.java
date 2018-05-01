@@ -1,5 +1,9 @@
 package me.dags.commandbus;
 
+import java.io.IOException;
+import java.io.Writer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import me.dags.command.CommandManager;
 import me.dags.command.annotation.Permission;
 import me.dags.command.command.CommandExecutor;
@@ -11,12 +15,6 @@ import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.service.permission.PermissionDescription;
 import org.spongepowered.api.service.permission.PermissionService;
 import org.spongepowered.api.text.Text;
-
-import java.io.IOException;
-import java.io.Writer;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Optional;
 
 /**
  * @author dags <dags@dags.me>
@@ -61,12 +59,7 @@ public class CommandBus extends CommandManager<SpongeCommand> {
                 continue;
             }
 
-            Optional<PermissionDescription.Builder> op = service.newDescriptionBuilder(getOwner());
-            if (!op.isPresent()) {
-                return;
-            }
-
-            PermissionDescription.Builder builder = op.get();
+            PermissionDescription.Builder builder = service.newDescriptionBuilder(getOwner());
             builder.description(Text.of("Allows use of /", e.getUsage().value()));
             builder.id(permission.value());
             if (!permission.role().value().isEmpty()) {
