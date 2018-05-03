@@ -5,7 +5,7 @@ plugins {
 }
 
 group 'me.dags'
-version '2.0.0-SNAPSHOT'
+version '2.0.0'
 def spongeAPI = '7.1.0'
 def spongeChannel = 'SNAPSHOT'
 
@@ -17,9 +17,8 @@ repositories {
 
 dependencies {
     compileOnly "org.spongepowered:spongeapi:${spongeAPI}-$spongeChannel"
-    testCompileOnly "org.spongepowered:spongeapi:${spongeAPI}-$spongeChannel"
     compile 'com.github.dags-:Command:0.1-BETA-14'
-    compile 'com.github.dags-:Fmt:0.1.1'
+    compile 'com.github.dags-:Fmt:0.2.0'
 }
 
 shadowJar {
