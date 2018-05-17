@@ -1,5 +1,5 @@
 plugins {
-    id 'com.github.johnrengelman.shadow' version '1.2.4'
+    id 'com.github.johnrengelman.shadow' version '2.0.0'
     id 'java'
     id 'maven'
 }
@@ -9,8 +9,9 @@ version '2.0.2'
 def spongeAPI = '7.1.0'
 def spongeChannel = 'SNAPSHOT'
 
-configurations.all {
-    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+configurations {
+    shade
+    compile.extendsFrom shade
 }
 
 repositories {
@@ -21,19 +22,19 @@ repositories {
 
 dependencies {
     compileOnly "org.spongepowered:spongeapi:${spongeAPI}-$spongeChannel"
-    compile 'com.github.dags-:Command:0.1.2'
-    compile 'com.github.dags-:Fmt:0.2.0'
+    shade 'com.github.dags-:Command:0.1.2'
+    shade 'com.github.dags-:Fmt:0.2.0'
 }
 
 shadowJar {
-    relocate 'io.github.lukehutch.fastclasspathscanner', 'me.dags.commandbus.fcps'
+    configurations = [project.configurations.shade]
     relocate 'me.dags.command.', 'me.dags.commandbus.'
     relocate 'me.dags.fmt.', 'me.dags.commandbus.fmt.'
     classifier = null
 }
 
 install.repositories.mavenInstaller.pom.whenConfigured { pom ->
-    pom.dependencies.removeAll {it.scope == "compile"}
+    pom.dependencies.removeAll { it.scope == "compile" }
 }
 
 jar.dependsOn shadowJar
