@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 import me.dags.command.CommandManager;
 import me.dags.command.annotation.Permission;
 import me.dags.command.command.CommandExecutor;
@@ -11,6 +12,7 @@ import me.dags.command.command.CommandFactory;
 import me.dags.command.element.ElementFactory;
 import me.dags.command.utils.MarkdownWriter;
 import org.spongepowered.api.Sponge;
+import org.spongepowered.api.event.cause.EventContextKeys;
 import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.service.permission.PermissionDescription;
 import org.spongepowered.api.service.permission.PermissionService;
@@ -97,6 +99,22 @@ public class CommandBus extends CommandManager<SpongeCommand> {
         return new Builder()
                 .elements(elements().build())
                 .commands(SpongeCommand::new);
+    }
+
+    public static CommandBus create() {
+        if (!Sponge.getServer().isMainThread()) {
+            throw new IllegalAccessError("Cannot create CommandBus off the main thread");
+        }
+
+        Optional<PluginContainer> plugin = Sponge.getCauseStackManager().getCurrentCause().last(PluginContainer.class);
+
+        if (!plugin.isPresent()) {
+            plugin = Sponge.getCauseStackManager().getContext(EventContextKeys.PLUGIN);
+        }
+
+        Builder builder = new Builder();
+        plugin.ifPresent(builder::owner);
+        return builder.build();
     }
 
     public static CommandBus create(Object plugin) {
