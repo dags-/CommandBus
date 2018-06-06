@@ -27,7 +27,13 @@ public class CommandBus extends CommandManager<SpongeCommand> {
 
     private CommandBus(CommandManager.Builder<SpongeCommand> builder) {
         super(builder);
-        plugin = Sponge.getPluginManager().fromInstance(getOwner()).orElseThrow(() -> new IllegalArgumentException("Provided object is not a plugin instance"));
+        Object owner = getOwner();
+        if (owner instanceof PluginContainer) {
+            plugin = (PluginContainer) owner;
+        } else {
+            plugin = Sponge.getPluginManager().fromInstance(owner)
+                    .orElseThrow(() -> new IllegalArgumentException("Provided object is not a plugin instance"));
+        }
     }
 
     @Override
@@ -102,19 +108,15 @@ public class CommandBus extends CommandManager<SpongeCommand> {
     }
 
     public static CommandBus create() {
-        if (!Sponge.getServer().isMainThread()) {
-            throw new IllegalAccessError("Cannot create CommandBus off the main thread");
-        }
-
         Optional<PluginContainer> plugin = Sponge.getCauseStackManager().getCurrentCause().last(PluginContainer.class);
 
         if (!plugin.isPresent()) {
             plugin = Sponge.getCauseStackManager().getContext(EventContextKeys.PLUGIN);
         }
 
-        Builder builder = new Builder();
-        plugin.ifPresent(builder::owner);
-        return builder.build();
+        PluginContainer container = plugin.orElseThrow(() -> new IllegalStateException("Unable to determine active PluginContainer"));
+
+        return builder().owner(container).build();
     }
 
     public static CommandBus create(Object plugin) {

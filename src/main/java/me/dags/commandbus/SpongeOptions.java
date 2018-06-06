@@ -1,5 +1,7 @@
 package me.dags.commandbus;
 
+import java.util.Comparator;
+import java.util.Optional;
 import me.dags.command.element.function.Options;
 import org.spongepowered.api.CatalogType;
 import org.spongepowered.api.Sponge;
@@ -7,9 +9,6 @@ import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.entity.living.player.User;
 import org.spongepowered.api.service.user.UserStorageService;
 import org.spongepowered.api.world.World;
-
-import java.util.Comparator;
-import java.util.Optional;
 
 /**
  * @author dags <dags@dags.me>

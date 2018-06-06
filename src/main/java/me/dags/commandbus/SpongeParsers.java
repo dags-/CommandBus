@@ -2,8 +2,10 @@ package me.dags.commandbus;
 
 import com.flowpowered.math.vector.Vector3d;
 import com.flowpowered.math.vector.Vector3i;
+import java.util.Optional;
 import me.dags.command.command.CommandException;
 import me.dags.command.command.Input;
+import me.dags.command.element.function.Filter;
 import me.dags.command.element.function.ValueParser;
 import org.spongepowered.api.CatalogType;
 import org.spongepowered.api.Sponge;
@@ -13,8 +15,6 @@ import org.spongepowered.api.profile.GameProfile;
 import org.spongepowered.api.service.user.UserStorageService;
 import org.spongepowered.api.world.World;
 
-import java.util.Optional;
-
 /**
  * @author dags <dags@dags.me>
  */
@@ -22,7 +22,7 @@ class SpongeParsers {
 
     static final ValueParser<Player> PLAYER = s -> {
         for (Player player : Sponge.getServer().getOnlinePlayers()) {
-            if (player.getName().equalsIgnoreCase(s)) {
+            if (Filter.STARTS_WITH.test(player.getName(), s)) {
                 return player;
             }
         }
@@ -32,7 +32,11 @@ class SpongeParsers {
     static final ValueParser<User> USER = s -> {
         UserStorageService service = Sponge.getServiceManager().provideUnchecked(UserStorageService.class);
         for (GameProfile profile : service.match(s)) {
-            if (profile.getName().orElse("").equalsIgnoreCase(s)) {
+            String name = profile.getName().orElse("");
+            if (name.isEmpty()) {
+                continue;
+            }
+            if (Filter.EQUALS_IGNORE_CASE.test(name, s)) {
                 Optional<User> user = service.get(profile.getUniqueId());
                 if (user.isPresent()) {
                     return user.get();
@@ -44,7 +48,7 @@ class SpongeParsers {
 
     static final ValueParser<World> WORLD = s -> {
         for (World world : Sponge.getServer().getWorlds()) {
-            if (world.getName().equalsIgnoreCase(s)) {
+            if (Filter.EQUALS_IGNORE_CASE.test(world.getName(), s)) {
                 return world;
             }
         }
@@ -54,10 +58,14 @@ class SpongeParsers {
     static final ValueParser<Vector3i> VEC3I = new ValueParser<Vector3i>() {
         @Override
         public Vector3i parse(Input input) throws CommandException {
-            int x = Integer.parseInt(input.next());
-            int y = Integer.parseInt(input.next());
-            int z = Integer.parseInt(input.next());
-            return new Vector3i(x, y, z);
+            try {
+                int x = Integer.parseInt(input.next());
+                int y = Integer.parseInt(input.next());
+                int z = Integer.parseInt(input.next());
+                return new Vector3i(x, y, z);
+            } catch (NumberFormatException e) {
+                throw new CommandException(e.getMessage());
+            }
         }
 
         @Override
@@ -69,10 +77,14 @@ class SpongeParsers {
     static final ValueParser<Vector3d> VEC3D = new ValueParser<Vector3d>() {
         @Override
         public Vector3d parse(Input input) throws CommandException {
-            double x = Double.parseDouble(input.next());
-            double y = Double.parseDouble(input.next());
-            double z = Double.parseDouble(input.next());
-            return new Vector3d(x, y, z);
+            try {
+                double x = Double.parseDouble(input.next());
+                double y = Double.parseDouble(input.next());
+                double z = Double.parseDouble(input.next());
+                return new Vector3d(x, y, z);
+            } catch (NumberFormatException e) {
+                throw new CommandException(e.getMessage());
+            }
         }
 
         @Override

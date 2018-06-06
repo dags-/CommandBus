@@ -1,5 +1,11 @@
 package me.dags.commandbus;
 
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.Nullable;
 import me.dags.command.command.Command;
 import me.dags.command.command.CommandExecutor;
 import org.spongepowered.api.command.CommandCallable;
@@ -12,13 +18,6 @@ import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.text.format.TextStyles;
 import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
-
-import javax.annotation.Nullable;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author dags <dags@dags.me>
