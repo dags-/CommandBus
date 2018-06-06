@@ -22,7 +22,7 @@ repositories {
 
 dependencies {
     compile "org.spongepowered:spongeapi:${spongeAPI}-$spongeChannel"
-    shade "com.github.dags-:Command:0.2.1"
+    shade "com.github.dags-:Command:0.2.3"
     shade "com.github.dags-:Fmt:0.2.3"
 }
 
