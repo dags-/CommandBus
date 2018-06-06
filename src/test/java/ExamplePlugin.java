@@ -1,18 +1,24 @@
-# CommandBus
-Another command annotation processing thing
+import java.util.Collection;
+import me.dags.command.annotation.Command;
+import me.dags.command.annotation.Description;
+import me.dags.command.annotation.Flag;
+import me.dags.command.annotation.Join;
+import me.dags.command.annotation.Permission;
+import me.dags.command.annotation.Src;
+import me.dags.command.command.Flags;
+import me.dags.commandbus.CommandBus;
+import me.dags.fmt.Fmt;
+import org.spongepowered.api.block.BlockType;
+import org.spongepowered.api.command.CommandSource;
+import org.spongepowered.api.entity.living.player.Player;
+import org.spongepowered.api.event.Listener;
+import org.spongepowered.api.event.game.state.GameInitializationEvent;
+import org.spongepowered.api.plugin.Plugin;
+import org.spongepowered.api.world.World;
 
-[![Release](https://jitpack.io/v/dags-/CommandBus.svg)](https://jitpack.io/#dags-/CommandBus)
-
-### Features:
-- Write commands as Java methods
-- Easy registration - by class, object, or even by package
-- Optional command flags
-- Generates command usage and help texts
-- Automatically generates & registers permissions
-- Generates per-plugin markdown tables of all commands/permissions/descriptions
-
-### Example Code:
-```java
+/**
+ * @author dags <dags@dags.me>
+ */
 @Plugin(id = "example", name = "Example", version = "1.0", description = "Example plugin")
 public class ExamplePlugin {
 
@@ -76,4 +82,3 @@ public class ExamplePlugin {
         }
     }
 }
-```
